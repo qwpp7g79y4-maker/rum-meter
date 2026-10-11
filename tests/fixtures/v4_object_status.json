@@ -1,0 +1,60 @@
+{
+  "version": 4,
+  "terraform_version": "1.9.8",
+  "serial": 1,
+  "lineage": "synthetic-handwritten-os",
+  "outputs": {
+    "note": {
+      "value": "CANARY-SECRET-OS-OUTPUT",
+      "type": "string",
+      "sensitive": true
+    }
+  },
+  "resources": [
+    {
+      "mode": "managed",
+      "type": "local_file",
+      "name": "a",
+      "provider": "provider[\"registry.terraform.io/hashicorp/local\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "current",
+            "content": "CANARY-SECRET-OS-ATTR"
+          },
+          "sensitive_attributes": ["CANARY-SECRET-OS-SENSITIVE"],
+          "private": "CANARY-SECRET-OS-PRIVATE"
+        },
+        {
+          "deposed": "00000001",
+          "schema_version": 0,
+          "attributes": {
+            "id": "previous",
+            "content": "CANARY-SECRET-OS-ATTR"
+          },
+          "sensitive_attributes": ["CANARY-SECRET-OS-SENSITIVE"],
+          "private": "CANARY-SECRET-OS-PRIVATE"
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "local_file",
+      "name": "b",
+      "provider": "provider[\"registry.terraform.io/hashicorp/local\"]",
+      "instances": [
+        {
+          "status": "tainted",
+          "schema_version": 0,
+          "attributes": {
+            "id": "marked",
+            "content": "CANARY-SECRET-OS-ATTR"
+          },
+          "sensitive_attributes": ["CANARY-SECRET-OS-SENSITIVE"],
+          "private": "CANARY-SECRET-OS-PRIVATE"
+        }
+      ]
+    }
+  ]
+}

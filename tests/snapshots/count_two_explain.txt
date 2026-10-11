@@ -1,0 +1,21 @@
+file: tests/fixtures/v4_handwritten.json
+rum: 2
+not counted: R2 1, R3 2, R4 1
+  null_resource.counted[0] does not count R3
+  null_resource.counted[3] does not count R3
+  module.child.random_id.labeled["web"] counts R1
+  module.child.random_id.labeled["db"] counts R1
+  module.child.module.nested.data.local_file.cfg does not count R2
+  module.child.module.nested.terraform_data.unused does not count R4
+file: tests/fixtures/v4_one_managed.json
+rum: 1
+not counted: R2 0, R3 0, R4 0
+  random_id.one counts R1
+total rum: 3
+not counted: R2 1, R3 2, R4 1
+modules:
+  module.child: 2
+  (root): 1
+types:
+  random_id: 3
+estimate: HCP Terraform bills the hourly peak; this is a single snapshot

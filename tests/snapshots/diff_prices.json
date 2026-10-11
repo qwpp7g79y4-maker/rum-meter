@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "tool": "rum-meter",
+  "estimate": "HCP Terraform bills the hourly peak; this is a single snapshot",
+  "inputs": {
+    "old": "tests/fixtures/v4_diff_old.json",
+    "new": "tests/fixtures/v4_diff_new.json"
+  },
+  "total_rum": {
+    "old": 6,
+    "new": 4
+  },
+  "by_module": [
+    {
+      "name": "(root)",
+      "count": 3
+    },
+    {
+      "name": "module.child",
+      "count": 1
+    }
+  ],
+  "by_type": [
+    {
+      "name": "random_id",
+      "count": 4
+    }
+  ],
+  "costs": [
+    {
+      "name": "alpha",
+      "currency": "EUR",
+      "amount": "3650.00"
+    },
+    {
+      "name": "beta",
+      "currency": "EUR",
+      "amount": "1460.00"
+    }
+  ],
+  "added": [
+    "random_id.servers[1]"
+  ],
+  "removed": [
+    "local_file.note",
+    "module.child.random_id.labeled[\"gone\"]",
+    "random_id.marker"
+  ],
+  "changed_rule": [],
+  "rum_delta": -2,
+  "cost_delta": [
+    {
+      "name": "alpha",
+      "currency": "EUR",
+      "amount": "-1825.00"
+    },
+    {
+      "name": "beta",
+      "currency": "EUR",
+      "amount": "-730.00"
+    }
+  ]
+}

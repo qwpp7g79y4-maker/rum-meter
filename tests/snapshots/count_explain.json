@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "tool": "rum-meter",
+  "estimate": "HCP Terraform bills the hourly peak; this is a single snapshot",
+  "inputs": [
+    "tests/fixtures/v4_handwritten.json"
+  ],
+  "total_rum": 2,
+  "by_module": [
+    {
+      "name": "module.child",
+      "count": 2
+    }
+  ],
+  "by_type": [
+    {
+      "name": "random_id",
+      "count": 2
+    }
+  ],
+  "instances": [
+    {
+      "file": "tests/fixtures/v4_handwritten.json",
+      "address": "null_resource.counted[0]",
+      "counts": false,
+      "rule": "R3"
+    },
+    {
+      "file": "tests/fixtures/v4_handwritten.json",
+      "address": "null_resource.counted[3]",
+      "counts": false,
+      "rule": "R3"
+    },
+    {
+      "file": "tests/fixtures/v4_handwritten.json",
+      "address": "module.child.random_id.labeled[\"web\"]",
+      "counts": true,
+      "rule": "R1"
+    },
+    {
+      "file": "tests/fixtures/v4_handwritten.json",
+      "address": "module.child.random_id.labeled[\"db\"]",
+      "counts": true,
+      "rule": "R1"
+    },
+    {
+      "file": "tests/fixtures/v4_handwritten.json",
+      "address": "module.child.module.nested.data.local_file.cfg",
+      "counts": false,
+      "rule": "R2"
+    },
+    {
+      "file": "tests/fixtures/v4_handwritten.json",
+      "address": "module.child.module.nested.terraform_data.unused",
+      "counts": false,
+      "rule": "R4"
+    }
+  ]
+}

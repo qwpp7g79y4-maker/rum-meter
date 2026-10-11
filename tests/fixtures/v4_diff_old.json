@@ -1,0 +1,109 @@
+{
+  "version": 4,
+  "terraform_version": "1.9.8",
+  "serial": 1,
+  "lineage": "synthetic-handwritten-d-old",
+  "outputs": {
+    "note": {
+      "value": "CANARY-SECRET-D-OUTPUT",
+      "type": "string",
+      "sensitive": true
+    }
+  },
+  "resources": [
+    {
+      "mode": "managed",
+      "type": "random_id",
+      "name": "servers",
+      "provider": "provider[\"registry.terraform.io/hashicorp/random\"]",
+      "instances": [
+        {
+          "index_key": 0,
+          "schema_version": 0,
+          "attributes": { "id": "CANARY-SECRET-D-ATTR" },
+          "sensitive_attributes": ["CANARY-SECRET-D-SENSITIVE"],
+          "private": "CANARY-SECRET-D-PRIVATE"
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "random_id",
+      "name": "steady",
+      "provider": "provider[\"registry.terraform.io/hashicorp/random\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": { "id": "CANARY-SECRET-D-ATTR" },
+          "sensitive_attributes": ["CANARY-SECRET-D-SENSITIVE"],
+          "private": "CANARY-SECRET-D-PRIVATE"
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "random_id",
+      "name": "marker",
+      "provider": "provider[\"registry.terraform.io/hashicorp/random\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": { "id": "CANARY-SECRET-D-ATTR" },
+          "sensitive_attributes": ["CANARY-SECRET-D-SENSITIVE"],
+          "private": "CANARY-SECRET-D-PRIVATE"
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "local_file",
+      "name": "note",
+      "provider": "provider[\"registry.terraform.io/hashicorp/local\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": { "filename": "CANARY-SECRET-D-ATTR" },
+          "sensitive_attributes": ["CANARY-SECRET-D-SENSITIVE"],
+          "private": "CANARY-SECRET-D-PRIVATE"
+        }
+      ]
+    },
+    {
+      "module": "module.child",
+      "mode": "managed",
+      "type": "random_id",
+      "name": "labeled",
+      "provider": "provider[\"registry.terraform.io/hashicorp/random\"]",
+      "instances": [
+        {
+          "index_key": "web",
+          "schema_version": 0,
+          "attributes": { "id": "CANARY-SECRET-D-ATTR" },
+          "sensitive_attributes": ["CANARY-SECRET-D-SENSITIVE"],
+          "private": "CANARY-SECRET-D-PRIVATE"
+        },
+        {
+          "index_key": "gone",
+          "schema_version": 0,
+          "attributes": { "id": "CANARY-SECRET-D-ATTR" },
+          "sensitive_attributes": ["CANARY-SECRET-D-SENSITIVE"],
+          "private": "CANARY-SECRET-D-PRIVATE"
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "local_file",
+      "name": "cfg",
+      "provider": "provider[\"registry.terraform.io/hashicorp/local\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": { "filename": "CANARY-SECRET-D-ATTR" },
+          "sensitive_attributes": ["CANARY-SECRET-D-SENSITIVE"],
+          "private": "CANARY-SECRET-D-PRIVATE"
+        }
+      ]
+    }
+  ]
+}

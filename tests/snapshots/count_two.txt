@@ -1,0 +1,14 @@
+file: tests/fixtures/v4_handwritten.json
+rum: 2
+not counted: R2 1, R3 2, R4 1
+file: tests/fixtures/v4_one_managed.json
+rum: 1
+not counted: R2 0, R3 0, R4 0
+total rum: 3
+not counted: R2 1, R3 2, R4 1
+modules:
+  module.child: 2
+  (root): 1
+types:
+  random_id: 3
+estimate: HCP Terraform bills the hourly peak; this is a single snapshot

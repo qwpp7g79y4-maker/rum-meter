@@ -1,0 +1,141 @@
+{
+  "version": 4,
+  "terraform_version": "1.9.8",
+  "serial": 1,
+  "lineage": "synthetic-handwritten-t",
+  "outputs": {
+    "note": {
+      "value": "CANARY-SECRET-T-OUTPUT",
+      "type": "string",
+      "sensitive": true
+    }
+  },
+  "resources": [
+    {
+      "mode": "managed",
+      "type": "null_resource",
+      "name": "skip",
+      "provider": "provider[\"registry.terraform.io/hashicorp/null\"]",
+      "instances": [
+        {
+          "index_key": 0,
+          "attributes": { "id": "CANARY-SECRET-T-ATTR" },
+          "sensitive_attributes": ["CANARY-SECRET-T-SENSITIVE"],
+          "private": "CANARY-SECRET-T-PRIVATE"
+        },
+        { "index_key": 1 }
+      ]
+    },
+    {
+      "module": "module.network",
+      "mode": "managed",
+      "type": "random_id",
+      "name": "net",
+      "provider": "provider[\"registry.terraform.io/hashicorp/random\"]",
+      "instances": [{ "index_key": 0 }]
+    },
+    {
+      "module": "module.network",
+      "mode": "managed",
+      "type": "random_pet",
+      "name": "pets",
+      "provider": "provider[\"registry.terraform.io/hashicorp/random\"]",
+      "instances": [{ "index_key": "a" }, { "index_key": "b" }]
+    },
+    {
+      "module": "module.network",
+      "mode": "managed",
+      "type": "local_file",
+      "name": "files",
+      "provider": "provider[\"registry.terraform.io/hashicorp/local\"]",
+      "instances": [{ "index_key": 0 }, { "index_key": 1 }]
+    },
+    {
+      "module": "module.network",
+      "mode": "managed",
+      "type": "random_id",
+      "name": "gone",
+      "provider": "provider[\"registry.terraform.io/hashicorp/random\"]",
+      "instances": []
+    },
+    {
+      "module": "module.compute",
+      "mode": "managed",
+      "type": "random_id",
+      "name": "ids",
+      "provider": "provider[\"registry.terraform.io/hashicorp/random\"]",
+      "instances": [{ "index_key": 0 }, { "index_key": 1 }]
+    },
+    {
+      "module": "module.compute",
+      "mode": "managed",
+      "type": "random_integer",
+      "name": "n",
+      "provider": "provider[\"registry.terraform.io/hashicorp/random\"]",
+      "instances": [{}]
+    },
+    {
+      "module": "module.compute",
+      "mode": "managed",
+      "type": "local_file",
+      "name": "files",
+      "provider": "provider[\"registry.terraform.io/hashicorp/local\"]",
+      "instances": [{ "index_key": 0 }, { "index_key": 1 }]
+    },
+    {
+      "module": "module.app",
+      "mode": "managed",
+      "type": "random_integer",
+      "name": "n",
+      "provider": "provider[\"registry.terraform.io/hashicorp/random\"]",
+      "instances": [{ "index_key": 0 }, { "index_key": 1 }]
+    },
+    {
+      "module": "module.app",
+      "mode": "managed",
+      "type": "random_string",
+      "name": "names",
+      "provider": "provider[\"registry.terraform.io/hashicorp/random\"]",
+      "instances": [{}]
+    },
+    {
+      "module": "module.app",
+      "mode": "data",
+      "type": "local_file",
+      "name": "cfg",
+      "provider": "provider[\"registry.terraform.io/hashicorp/local\"]",
+      "instances": [{}]
+    },
+    {
+      "module": "module.data",
+      "mode": "managed",
+      "type": "random_pet",
+      "name": "pet",
+      "provider": "provider[\"registry.terraform.io/hashicorp/random\"]",
+      "instances": [{}]
+    },
+    {
+      "module": "module.data",
+      "mode": "managed",
+      "type": "random_string",
+      "name": "name",
+      "provider": "provider[\"registry.terraform.io/hashicorp/random\"]",
+      "instances": [{}]
+    },
+    {
+      "module": "module.data",
+      "mode": "managed",
+      "type": "terraform_data",
+      "name": "marker",
+      "provider": "provider[\"terraform.io/builtin/terraform\"]",
+      "instances": [{}]
+    },
+    {
+      "mode": "managed",
+      "type": "random_id",
+      "name": "one",
+      "provider": "provider[\"registry.terraform.io/hashicorp/random\"]",
+      "instances": [{}]
+    }
+  ]
+}

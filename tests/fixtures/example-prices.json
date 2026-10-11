@@ -1,0 +1,14 @@
+{
+  "note": "Example. Not a HashiCorp rate.",
+  "currency": "EUR",
+  "tiers": [
+    {
+      "name": "example-a",
+      "price_per_rum_hour": 1
+    },
+    {
+      "name": "example-b",
+      "price_per_rum_hour": 0.5
+    }
+  ]
+}

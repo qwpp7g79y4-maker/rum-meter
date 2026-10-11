@@ -1,0 +1,31 @@
+{
+  "version": 4,
+  "terraform_version": "1.9.8",
+  "serial": 1,
+  "lineage": "synthetic-handwritten-o",
+  "outputs": {
+    "note": {
+      "value": "CANARY-SECRET-O-OUTPUT",
+      "type": "string",
+      "sensitive": true
+    }
+  },
+  "resources": [
+    {
+      "mode": "managed",
+      "type": "random_id",
+      "name": "one",
+      "provider": "provider[\"registry.terraform.io/hashicorp/random\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "CANARY-SECRET-O-ATTR"
+          },
+          "sensitive_attributes": ["CANARY-SECRET-O-SENSITIVE"],
+          "private": "CANARY-SECRET-O-PRIVATE"
+        }
+      ]
+    }
+  ]
+}

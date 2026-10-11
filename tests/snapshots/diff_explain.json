@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "tool": "rum-meter",
+  "estimate": "HCP Terraform bills the hourly peak; this is a single snapshot",
+  "inputs": {
+    "old": "tests/fixtures/v4_diff_old.json",
+    "new": "tests/fixtures/v4_diff_new.json"
+  },
+  "total_rum": {
+    "old": 6,
+    "new": 4
+  },
+  "by_module": [
+    {
+      "name": "(root)",
+      "count": 3
+    },
+    {
+      "name": "module.child",
+      "count": 1
+    }
+  ],
+  "by_type": [
+    {
+      "name": "random_id",
+      "count": 4
+    }
+  ],
+  "instances": [
+    {
+      "file": "tests/fixtures/v4_diff_old.json",
+      "address": "random_id.servers[0]",
+      "counts": true,
+      "rule": "R1"
+    },
+    {
+      "file": "tests/fixtures/v4_diff_old.json",
+      "address": "random_id.steady",
+      "counts": true,
+      "rule": "R1"
+    },
+    {
+      "file": "tests/fixtures/v4_diff_old.json",
+      "address": "random_id.marker",
+      "counts": true,
+      "rule": "R1"
+    },
+    {
+      "file": "tests/fixtures/v4_diff_old.json",
+      "address": "local_file.note",
+      "counts": true,
+      "rule": "R1"
+    },
+    {
+      "file": "tests/fixtures/v4_diff_old.json",
+      "address": "module.child.random_id.labeled[\"web\"]",
+      "counts": true,
+      "rule": "R1"
+    },
+    {
+      "file": "tests/fixtures/v4_diff_old.json",
+      "address": "module.child.random_id.labeled[\"gone\"]",
+      "counts": true,
+      "rule": "R1"
+    },
+    {
+      "file": "tests/fixtures/v4_diff_old.json",
+      "address": "data.local_file.cfg",
+      "counts": false,
+      "rule": "R2"
+    },
+    {
+      "file": "tests/fixtures/v4_diff_new.json",
+      "address": "random_id.servers[0]",
+      "counts": true,
+      "rule": "R1"
+    },
+    {
+      "file": "tests/fixtures/v4_diff_new.json",
+      "address": "random_id.servers[1]",
+      "counts": true,
+      "rule": "R1"
+    },
+    {
+      "file": "tests/fixtures/v4_diff_new.json",
+      "address": "random_id.steady",
+      "counts": true,
+      "rule": "R1"
+    },
+    {
+      "file": "tests/fixtures/v4_diff_new.json",
+      "address": "terraform_data.marker",
+      "counts": false,
+      "rule": "R3"
+    },
+    {
+      "file": "tests/fixtures/v4_diff_new.json",
+      "address": "data.local_file.note",
+      "counts": false,
+      "rule": "R2"
+    },
+    {
+      "file": "tests/fixtures/v4_diff_new.json",
+      "address": "module.child.random_id.labeled[\"web\"]",
+      "counts": true,
+      "rule": "R1"
+    },
+    {
+      "file": "tests/fixtures/v4_diff_new.json",
+      "address": "data.local_file.cfg",
+      "counts": false,
+      "rule": "R2"
+    }
+  ],
+  "added": [
+    "random_id.servers[1]"
+  ],
+  "removed": [
+    "local_file.note",
+    "module.child.random_id.labeled[\"gone\"]",
+    "random_id.marker"
+  ],
+  "changed_rule": [],
+  "rum_delta": -2
+}

@@ -1,0 +1,20 @@
+{
+  "version": 4,
+  "outputs": {
+    "db_password": { "value": "CANARY-SECRET-SF-OUTPUT", "type": "string" }
+  },
+  "resources": [
+    {
+      "mode": "managed",
+      "type": "random_id",
+      "name": "kept",
+      "instances": [
+        {
+          "attributes": { "token": "CANARY-SECRET-SF-ATTR" },
+          "sensitive_attributes": ["CANARY-SECRET-SF-SENSITIVE"],
+          "private": "CANARY-SECRET-SF-PRIVATE"
+        }
+      ]
+    }
+  ],
+  "note": "CANARY-SECRET-SF-BROKEN"

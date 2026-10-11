@@ -1,0 +1,10 @@
+/target
+
+# OpenTofu work files. The fixture kept in git is terraform.tfstate in the same directory.
+tests/fixtures/tofu/**/.terraform/
+tests/fixtures/tofu/**/.terraform.lock.hcl
+tests/fixtures/tofu/**/terraform.tfstate.backup
+tests/fixtures/tofu/**/.terraform.tfstate.lock.info
+tests/fixtures/tofu/**/crash.log
+tests/fixtures/tofu/**/crash.*.log
+tests/fixtures/tofu/**/*.generated

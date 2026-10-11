@@ -1,0 +1,83 @@
+{
+  "version": 4,
+  "terraform_version": "1.9.8",
+  "serial": 2,
+  "lineage": "synthetic-sf-new",
+  "outputs": {
+    "db_password": {
+      "value": "CANARY-SECRET-SF-OUTPUT",
+      "type": "string",
+      "sensitive": true
+    }
+  },
+  "resources": [
+    {
+      "mode": "managed",
+      "type": "random_id",
+      "name": "kept",
+      "provider": "provider[\"registry.terraform.io/hashicorp/random\"]",
+      "instances": [
+        {
+          "index_key": 0,
+          "schema_version": 0,
+          "attributes": {
+            "id": "kept-0",
+            "triggers": { "token": "CANARY-SECRET-SF-ATTR" }
+          },
+          "sensitive_attributes": ["CANARY-SECRET-SF-SENSITIVE"],
+          "private": "CANARY-SECRET-SF-PRIVATE"
+        },
+        {
+          "index_key": 1,
+          "schema_version": 0,
+          "attributes": {
+            "id": "kept-1",
+            "triggers": { "token": "CANARY-SECRET-SF-ATTR" }
+          },
+          "sensitive_attributes": ["CANARY-SECRET-SF-SENSITIVE"],
+          "private": "CANARY-SECRET-SF-PRIVATE"
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "local_file",
+      "name": "note",
+      "provider": "provider[\"registry.terraform.io/hashicorp/local\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "filename": "note.txt",
+            "content": "CANARY-SECRET-SF-ATTR"
+          },
+          "sensitive_attributes": ["CANARY-SECRET-SF-SENSITIVE"],
+          "private": "CANARY-SECRET-SF-PRIVATE"
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "null_resource",
+      "name": "wait",
+      "provider": "provider[\"registry.terraform.io/hashicorp/null\"]",
+      "instances": [
+        {
+          "index_key": 0,
+          "schema_version": 0,
+          "attributes": { "id": "wait-0", "triggers": { "token": "CANARY-SECRET-SF-ATTR" } },
+          "sensitive_attributes": ["CANARY-SECRET-SF-SENSITIVE"],
+          "private": "CANARY-SECRET-SF-PRIVATE"
+        }
+      ]
+    },
+    {
+      "module": "module.child.module.nested",
+      "mode": "managed",
+      "type": "random_id",
+      "name": "absent",
+      "provider": "provider[\"registry.terraform.io/hashicorp/random\"]",
+      "instances": []
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+name: Bug report
+description: Something in rum-meter does not work as documented.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please check the [reference](https://github.com/qwpp7g79y4-maker/rum-meter/blob/main/docs/reference.md) first: it lists every option, exit code and error message.
+
+        For a security problem, such as an attribute value that shows up in the output, do not open a public issue. Follow [SECURITY.md](https://github.com/qwpp7g79y4-maker/rum-meter/blob/main/SECURITY.md) instead.
+  - type: input
+    id: version
+    attributes:
+      label: rum-meter version
+      description: Output of `rum-meter --version`.
+      placeholder: rum-meter 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: Ubuntu 24.04, Windows 11, macOS 15 (Apple Silicon)
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Install method
+      options:
+        - crates.io (cargo install rum-meter)
+        - Binary from the Releases page
+        - Git (cargo install --git)
+        - Built from a local clone
+    validations:
+      required: true
+  - type: input
+    id: producer
+    attributes:
+      label: Terraform or OpenTofu version that wrote the state
+      placeholder: Terraform 1.9.5, OpenTofu 1.8.2
+  - type: textarea
+    id: command
+    attributes:
+      label: Exact command
+      description: The full command line you ran.
+      render: shell
+      placeholder: rum-meter count terraform.tfstate
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+      description: The output or error message you got.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: input
+    id: exit-code
+    attributes:
+      label: Exit code
+      description: "`echo $?` on Linux and macOS, `echo $LASTEXITCODE` in PowerShell."
+      placeholder: "0"
+  - type: textarea
+    id: sample
+    attributes:
+      label: Small sample state
+      description: |
+        A minimal state that reproduces the problem.
+        **Never paste a real state file.** A state can hold passwords, keys, tokens and other secrets in plain text under `attributes`, `sensitive_attributes`, `private` and `outputs`. Keep only `version`, the resource `mode`, `type`, `name`, `module` and the instance `index_key`, `deposed` and `status`, and replace real names with made-up ones.
+      render: json
+  - type: checkboxes
+    id: no-secrets
+    attributes:
+      label: Check
+      options:
+        - label: The sample above contains no real secrets, attribute values or personal data.
+          required: true
