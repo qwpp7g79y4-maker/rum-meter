@@ -253,8 +253,8 @@ De billingpagina toont de telling achteraf. rum-meter leest een bestand dat je a
 
 ## Beperkingen
 
-- De officiële afrekening is de hourly peak: het maximum aantal gelijktijdige managed resources per billing-uur, opgeteld over de HCP Terraform-organisaties onder één HCP-organisatie (R5). Die piek is offline niet te meten. rum-meter telt één momentopname per bestand en noemt de uitkomst een schatting.
-- De definitie telt een resource als die in een door HCP Terraform beheerde state staat en minstens één plan of apply heeft gehad (R6). rum-meter ziet die historie niet en neemt elke instantie in het gegeven bestand mee.
+- De officiële afrekening is de hourly peak: het maximum aantal gelijktijdige managed resources per billing-uur, opgeteld over de HCP Terraform-organisaties onder één HCP-organisatie. Die piek is offline niet te meten. rum-meter telt één momentopname per bestand en noemt de uitkomst een schatting.
+- De definitie telt een resource als die in een door HCP Terraform beheerde state staat en minstens één plan of apply heeft gehad. rum-meter ziet die historie niet en neemt elke instantie in het gegeven bestand mee.
 - Alleen stateformaat v4 (Terraform 0.12 en nieuwer) wordt gelezen. Remote state en planbestanden blijven buiten de tool. Tel meerdere workspaces door meerdere bestanden mee te geven. De som is niet per uur en niet per organisatie.
 - Eén workspace is één state. Flex, contracten en andere kortingen komen alleen mee als ze in het prijsbestand staan. rum-meter controleert die getallen niet. Oude free-tier-regels en Terraform Enterprise-licenties hebben geen eigen model.
 - "Each partial hour is billed as a full hour". Afronden per uur is niet gemodelleerd.

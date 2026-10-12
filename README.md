@@ -251,8 +251,8 @@ The billing page shows the count afterwards. rum-meter reads a file you already 
 
 ## Limitations
 
-- The official bill is the hourly peak: the maximum number of simultaneous managed resources per billing hour, summed across the HCP Terraform organizations under one HCP organization (R5). That peak cannot be measured offline. rum-meter counts one snapshot per file and calls the result an estimate.
-- The definition counts a resource when it is in an HCP Terraform-managed state and has had at least one plan or apply (R6). rum-meter does not see that history and includes every instance in the given file.
+- The official bill is the hourly peak: the maximum number of simultaneous managed resources per billing hour, summed across the HCP Terraform organizations under one HCP organization. That peak cannot be measured offline. rum-meter counts one snapshot per file and calls the result an estimate.
+- The definition counts a resource when it is in an HCP Terraform-managed state and has had at least one plan or apply. rum-meter does not see that history and includes every instance in the given file.
 - Only state format v4 (Terraform 0.12 and newer) is read. Remote state and plan files stay outside the tool. Count several workspaces by passing several files. The sum is not per hour and not per organization.
 - One workspace is one state. Flex, contracts and other discounts are included only when they are in the price file. rum-meter does not check those numbers. Old free-tier rules and Terraform Enterprise licenses have no model of their own.
 - "Each partial hour is billed as a full hour". Rounding per hour is not modeled.
