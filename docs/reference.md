@@ -76,7 +76,7 @@ The reader stores `version`, and for each resource `mode`, `type`, `name`, `modu
 
 The file must be UTF-8; the same holds for a price file. A leading UTF-8 BOM (the 3 bytes `EF BB BF`) is skipped. A UTF-16 BOM (`FF FE` or `FE FF`), such as Windows PowerShell 5.1 writes on a redirect, is not converted. That is exit 2: `file is UTF-16; save it as UTF-8`. A UTF-32 BOM (`FF FE 00 00` or `00 00 FE FF`) gives `file is UTF-32; save it as UTF-8`. Without a BOM the encoding is recognised by the NUL bytes among the first 4 bytes, as in RFC 4627: a JSON text starts with an ASCII character. Nothing of such a file is decoded. CRLF line ends count the same as LF. A path that is not valid UTF-8 is read and shown with U+FFFD for the invalid bytes, in text and in JSON.
 
-Only a regular file is read. `metadata().is_file()` runs before any byte is read, for a state and for a price file. A directory, a FIFO or a device is `not a regular file`. That is why a pipe or process substitution does not work. A missing path is `unreadable (not found)`. The other unreadable kinds are `permission denied`, `is a directory` and `io error`.
+Only a regular file is read, for a state and for a price file. The file is opened without waiting, and the type is taken from that opened file, before any byte of it is read. A directory, a FIFO, a device, or a symlink to one of those is `not a regular file`. A path that becomes a FIFO is not read and does not hang. A symlink to a regular file is read. That is why a pipe or process substitution does not work. A missing path is `unreadable (not found)`. The other unreadable kinds are `permission denied`, `is a directory` and `io error`.
 
 Each address may occur once, in one file and across the files passed to `count`. A repeat, at the root, in a module, with count or for_each, as a deposed object, or in a later file, is exit 2: `duplicate address`, plus the address. Control characters in that address are written as `\u00XX`. Attribute values are not included. The first repeat in verdict order is the one reported. On `diff`, added and removed therefore still add up to the RUM delta. Text output escapes control characters the same way. JSON keeps the characters and lets the JSON encoder escape them.
 
@@ -133,7 +133,7 @@ Text reports and error messages escape control characters, and invisible or bidi
 | 2 | Input error: unreadable file, not a regular file, invalid JSON, a state that is not a JSON object, state version not 4, UTF-16 or UTF-32, a duplicate address, an invalid price file, or a cost that overflows. Stdout is empty. |
 | 3 | Usage error, including a flag that would not change the report. Stdout is empty. |
 
-A report that cannot be written or flushed to stdout also exits 2, with `rum-meter: cannot write report to stdout`. Some report bytes may already have been written when the failure occurs.
+A report that cannot be written or flushed to stdout also exits 2, with `rum-meter: cannot write report to stdout`. Some report bytes may already have been written when the failure occurs. A closed stdout is the same error. `--version` and `--help` that cannot be written or flushed also exit 2, not 0, with `rum-meter: cannot write message to stdout`. A failed write does not panic. When stderr cannot be written either, the exit code is unchanged and there is no panic.
 
 Every row below is run against the binary. The message is the whole stderr, and `\n` is a newline.
 

@@ -12,13 +12,12 @@
 //! are refused: the file has to be saved as UTF-8. The bytes are not decoded.
 //! See [`crate::encoding`].
 //!
-//! Only a regular file is read. [`std::fs::metadata`] and `is_file` run before
-//! [`std::fs::read`]. A directory, a FIFO or a device is refused without
-//! reading a byte.
+//! Only a regular file is read. The file is opened first, without waiting on
+//! Unix, and the type is taken from that descriptor before any byte is read.
+//! A directory, a FIFO, a device, or a symlink to one of those is refused.
+//! A symlink to a regular file is read.
 
 use std::fmt;
-use std::fs;
-use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
@@ -202,13 +201,9 @@ impl std::error::Error for LoadError {}
 /// Read one state file. The error text is only the path, the error kind, and
 /// for JSON the line and column. It never includes bytes from the file.
 ///
-/// A path that is not a regular file is refused before [`fs::read`].
+/// A path that is not a regular file is refused without reading a byte.
 pub fn load_state(path: &Path) -> Result<State, LoadError> {
-    reject_unless_regular_file(path)?;
-    let bytes = fs::read(path).map_err(|err| LoadError::Unreadable {
-        path: path.to_path_buf(),
-        kind: io_kind_label(err.kind()),
-    })?;
+    let bytes = crate::regular::read_regular(path).map_err(|err| read_error(path, err))?;
     parse_bytes(&bytes).map_err(|err| match err {
         ParseError::InvalidJson { line, column } => LoadError::invalid_json(path, line, column),
         ParseError::UnsupportedVersion => LoadError::unsupported_version(path),
@@ -249,27 +244,15 @@ fn json_root_is_array(bytes: &[u8]) -> bool {
         == Some(b'[')
 }
 
-/// `metadata().is_file()` before any read. A FIFO would block in `fs::read`
-/// when nobody is writing, and `/dev/zero` would grow without a bound.
-fn reject_unless_regular_file(path: &Path) -> Result<(), LoadError> {
-    match fs::metadata(path) {
-        Ok(meta) if meta.is_file() => Ok(()),
-        Ok(_) => Err(LoadError::NotRegular {
+fn read_error(path: &Path, err: crate::regular::RegularError) -> LoadError {
+    match err {
+        crate::regular::RegularError::NotRegular => LoadError::NotRegular {
             path: path.to_path_buf(),
-        }),
-        Err(err) => Err(LoadError::Unreadable {
+        },
+        crate::regular::RegularError::Unreadable { kind } => LoadError::Unreadable {
             path: path.to_path_buf(),
-            kind: io_kind_label(err.kind()),
-        }),
-    }
-}
-
-fn io_kind_label(kind: ErrorKind) -> &'static str {
-    match kind {
-        ErrorKind::NotFound => "not found",
-        ErrorKind::PermissionDenied => "permission denied",
-        ErrorKind::IsADirectory => "is a directory",
-        _ => "io error",
+            kind,
+        },
     }
 }
 

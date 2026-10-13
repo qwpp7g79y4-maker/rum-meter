@@ -87,27 +87,55 @@ fn main() -> ExitCode {
     match Cli::try_parse() {
         Ok(cli) => {
             if let Some(message) = refused_option(&cli) {
-                eprintln!("{message}");
+                write_stderr_line(message);
                 return ExitCode::from(3);
             }
             match execute(&cli) {
                 Ok(RunOutcome::Success) => ExitCode::SUCCESS,
                 Ok(RunOutcome::ThresholdExceeded) => ExitCode::from(1),
                 Err(err) => {
-                    eprintln!("{err}");
+                    write_stderr_line(&err.to_string());
                     ExitCode::from(2)
                 }
             }
         }
-        Err(err) => {
-            let _ = err.print();
-            if err.use_stderr() {
-                ExitCode::from(3)
-            } else {
-                ExitCode::SUCCESS
-            }
-        }
+        Err(err) => clap_exit(err),
     }
+}
+
+/// Help and version go to stdout and are buffered. Flush, or a full stdout
+/// still looks like success. A failed write does not panic. Usage errors
+/// stay exit 3.
+fn clap_exit(err: clap::Error) -> ExitCode {
+    let usage = err.use_stderr();
+    let printed = err.print();
+    let flushed = if usage {
+        io::stderr().flush()
+    } else {
+        io::stdout().flush()
+    };
+    if printed.is_ok() && flushed.is_ok() {
+        return if usage {
+            ExitCode::from(3)
+        } else {
+            ExitCode::SUCCESS
+        };
+    }
+    if usage {
+        write_stderr_line("rum-meter: cannot write message to stderr");
+        ExitCode::from(3)
+    } else {
+        write_stderr_line("rum-meter: cannot write message to stdout");
+        ExitCode::from(2)
+    }
+}
+
+/// One line on stderr. A full or closed stderr is ignored so the caller can
+/// still return its exit code.
+fn write_stderr_line(message: &str) {
+    let mut stderr = io::stderr().lock();
+    let _ = writeln!(stderr, "{message}");
+    let _ = stderr.flush();
 }
 
 enum CliError {

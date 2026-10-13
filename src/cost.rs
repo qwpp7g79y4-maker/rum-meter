@@ -9,13 +9,12 @@
 //! The program has no built-in prices. Error text is the path and the kind of
 //! problem, never bytes from the file.
 //!
-//! Only a regular file is read. [`std::fs::metadata`] and `is_file` run before
-//! [`std::fs::read`]. A directory, a FIFO or a device is refused without
-//! reading a byte.
+//! Only a regular file is read. The file is opened first, without waiting on
+//! Unix, and the type is taken from that descriptor before any byte is read.
+//! A directory, a FIFO, a device, or a symlink to one of those is refused.
+//! A symlink to a regular file is read.
 
 use std::fmt;
-use std::fs;
-use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
@@ -278,13 +277,9 @@ impl std::error::Error for PriceError {}
 
 /// Read one price file. The error text never includes bytes from the file.
 ///
-/// A path that is not a regular file is refused before [`fs::read`].
+/// A path that is not a regular file is refused without reading a byte.
 pub fn load_prices(path: &Path) -> Result<PriceList, PriceError> {
-    reject_unless_regular_file(path)?;
-    let bytes = fs::read(path).map_err(|err| PriceError::Unreadable {
-        path: path.to_path_buf(),
-        kind: io_kind_label(err.kind()),
-    })?;
+    let bytes = crate::regular::read_regular(path).map_err(|err| read_error(path, err))?;
     parse_bytes(&bytes).map_err(|err| err.with_path(path))
 }
 
@@ -396,27 +391,15 @@ fn parse_price(raw: &str) -> Result<BigDecimal, ParseError> {
     Ok(price)
 }
 
-/// `metadata().is_file()` before any read. A FIFO would block in `fs::read`
-/// when nobody is writing, and `/dev/zero` would grow without a bound.
-fn reject_unless_regular_file(path: &Path) -> Result<(), PriceError> {
-    match fs::metadata(path) {
-        Ok(meta) if meta.is_file() => Ok(()),
-        Ok(_) => Err(PriceError::NotRegular {
+fn read_error(path: &Path, err: crate::regular::RegularError) -> PriceError {
+    match err {
+        crate::regular::RegularError::NotRegular => PriceError::NotRegular {
             path: path.to_path_buf(),
-        }),
-        Err(err) => Err(PriceError::Unreadable {
+        },
+        crate::regular::RegularError::Unreadable { kind } => PriceError::Unreadable {
             path: path.to_path_buf(),
-            kind: io_kind_label(err.kind()),
-        }),
-    }
-}
-
-fn io_kind_label(kind: ErrorKind) -> &'static str {
-    match kind {
-        ErrorKind::NotFound => "not found",
-        ErrorKind::PermissionDenied => "permission denied",
-        ErrorKind::IsADirectory => "is a directory",
-        _ => "io error",
+            kind,
+        },
     }
 }
 
@@ -424,6 +407,7 @@ fn io_kind_label(kind: ErrorKind) -> &'static str {
 mod tests {
     use super::*;
     use bigdecimal::BigDecimal;
+    use std::fs;
     use std::str::FromStr;
 
     const CANARY: &str = "CANARY-SECRET-PR";

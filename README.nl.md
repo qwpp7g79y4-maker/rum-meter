@@ -217,6 +217,8 @@ Exitcode 0 is gelukt. Exitcode 1 is een drempel: `--max-rum` bij `count`, `--max
 - `--top with diff only works together with --json`
 - `--explain with diff only works together with --json`
 
+Een rapport dat niet naar stdout geschreven kan worden is exit 2, met `rum-meter: cannot write report to stdout`, en een gesloten stdout is dezelfde fout. `--version` en `--help` die niet geschreven kunnen worden zijn exit 2, niet 0, met `rum-meter: cannot write message to stdout`. Een mislukte schrijfactie geeft geen panic, ook niet als stderr niet geschreven kan worden.
+
 Alle opties, exitcodes en foutmeldingen staan in de [referentie](docs/reference.nl.md) en in `rum-meter --help`.
 
 ## Hoe het rekent
@@ -263,7 +265,7 @@ De billingpagina toont de telling achteraf. rum-meter leest een bestand dat je a
 - Een state hoort elk adres één keer te hebben. Komt een adres twee keer voor, op root, in een module, met count of for_each, of als deposed object, dan telt rum-meter die state niet: exit 2, met het adres en de reden, zonder attribuutwaarden. Dezelfde regel geldt als `count` meerdere bestanden krijgt: het bestand dat een adres herhaalt is exit 2, en de totalen worden niet afgedrukt. Bij `diff` blijven added en removed daardoor optellen tot de RUM-delta.
 - rum-meter leest UTF-8, voor statebestanden en prijsbestanden. Een UTF-8 BOM aan het begin van het bestand wordt overgeslagen. Een UTF-16- of UTF-32-bestand, met of zonder BOM, zoals Windows PowerShell 5.1 bij een redirect schrijft, wordt niet omgezet. Dat is exit 2, met de melding dat het bestand UTF-16 (of UTF-32) is en als UTF-8 opgeslagen moet worden, bijvoorbeeld met `iconv -f UTF-16 -t UTF-8` of in PowerShell met `Out-File -Encoding utf8`. CRLF-regeleinden zijn geen probleem.
 - Een bestandsnaam die geen geldige UTF-8 is (kan op Linux) wordt wel gelezen, maar in het rapport getoond met U+FFFD voor de ongeldige bytes.
-- rum-meter leest alleen gewone bestanden, dus geen pipe of process substitution. Een map, een FIFO of een apparaat wordt geweigerd met exit 2 voordat er een byte wordt gelezen.
+- rum-meter leest alleen gewone bestanden, dus geen pipe of process substitution. Een map, een FIFO of een apparaat wordt geweigerd met exit 2 voordat er een byte wordt gelezen. Een symlink naar een FIFO wordt op dezelfde manier geweigerd. Het openen wacht niet, en het type komt van het geopende bestand, zodat een pad dat een FIFO wordt niet wordt gelezen en niet blijft hangen. Een symlink naar een gewoon bestand wordt wel gelezen.
 
 Waar de fixtures vandaan komen: [tests/fixtures/README.md](tests/fixtures/README.md).
 

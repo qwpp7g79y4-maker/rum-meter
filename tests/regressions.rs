@@ -220,6 +220,70 @@ fn failed_stdout_returns_an_error_without_panicking() {
     }
 }
 
+#[cfg(target_os = "linux")]
+#[test]
+fn count_to_dev_full_on_both_streams_does_not_panic() {
+    let full_out = fs::OpenOptions::new()
+        .write(true)
+        .open("/dev/full")
+        .expect("/dev/full");
+    let full_err = fs::OpenOptions::new()
+        .write(true)
+        .open("/dev/full")
+        .expect("/dev/full");
+    let output = Command::new(env!("CARGO_BIN_EXE_rum-meter"))
+        .arg("count")
+        .arg(fixture())
+        .stdout(full_out)
+        .stderr(full_err)
+        .output()
+        .unwrap();
+    let code = output.status.code();
+    assert_ne!(code, Some(101), "panic: {code:?}");
+    assert_ne!(code, Some(0), "full stdout looked like success");
+    assert_eq!(code, Some(2), "{code:?}");
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn missing_state_with_stderr_dev_full_does_not_panic() {
+    let full_err = fs::OpenOptions::new()
+        .write(true)
+        .open("/dev/full")
+        .expect("/dev/full");
+    let output = Command::new(env!("CARGO_BIN_EXE_rum-meter"))
+        .args(["count", "/nope"])
+        .stderr(full_err)
+        .output()
+        .unwrap();
+    let code = output.status.code();
+    assert_ne!(code, Some(101), "panic: {code:?}");
+    assert_eq!(code, Some(2), "{code:?}");
+    assert!(output.stdout.is_empty(), "{:?}", output.stdout);
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn version_to_dev_full_is_not_success() {
+    let full_out = fs::OpenOptions::new()
+        .write(true)
+        .open("/dev/full")
+        .expect("/dev/full");
+    let output = Command::new(env!("CARGO_BIN_EXE_rum-meter"))
+        .arg("--version")
+        .stdout(full_out)
+        .output()
+        .unwrap();
+    let code = output.status.code();
+    assert_ne!(code, Some(0), "version to /dev/full exited 0");
+    assert_ne!(code, Some(101), "panic: {code:?}");
+    assert_eq!(code, Some(2), "{code:?}");
+    assert_eq!(
+        String::from_utf8(output.stderr).unwrap(),
+        "rum-meter: cannot write message to stdout\n"
+    );
+}
+
 #[cfg(unix)]
 #[test]
 fn closed_stdout_returns_an_error_without_panicking() {

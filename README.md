@@ -215,6 +215,8 @@ Exit code 0 is success. Exit code 1 is a threshold: `--max-rum` on `count`, `--m
 - `--top with diff only works together with --json`
 - `--explain with diff only works together with --json`
 
+A report that cannot be written to stdout is exit 2, with `rum-meter: cannot write report to stdout`, and a closed stdout is the same error. `--version` and `--help` that cannot be written are exit 2, not 0, with `rum-meter: cannot write message to stdout`. A failed write does not panic, even when stderr cannot be written.
+
 All options, exit codes and error messages are listed in the [reference](docs/reference.md) and in `rum-meter --help`.
 
 ## How it counts
@@ -261,7 +263,7 @@ The billing page shows the count afterwards. rum-meter reads a file you already 
 - A state should contain each address once. If an address appears twice, at the root, in a module, with count or for_each, or as a deposed object, rum-meter does not count that state: exit 2, with the address and the reason, without attribute values. The same rule applies when `count` is given several files: the file that repeats an address is exit 2, and the totals are not printed. On `diff`, added and removed therefore still add up to the RUM delta.
 - rum-meter reads UTF-8, for state files and price files. A UTF-8 BOM at the start of the file is skipped. A UTF-16 or UTF-32 file, with or without a BOM, such as Windows PowerShell 5.1 writes on a redirect, is not converted. That is exit 2, with the message that the file is UTF-16 (or UTF-32) and must be saved as UTF-8, for example with `iconv -f UTF-16 -t UTF-8` or in PowerShell with `Out-File -Encoding utf8`. CRLF line ends are fine.
 - A file name that is not valid UTF-8 (possible on Linux) is read, but shown in the report with U+FFFD for the invalid bytes.
-- rum-meter reads only regular files, so not a pipe or process substitution. A directory, a FIFO or a device is refused with exit 2 before any byte is read.
+- rum-meter reads only regular files, so not a pipe or process substitution. A directory, a FIFO or a device is refused with exit 2 before any byte is read. A symlink to a FIFO is refused the same way. The open does not wait, and the type is taken from the opened file, so a path that becomes a FIFO is not read and does not hang. A symlink to a regular file is read.
 
 Where the fixtures come from: [tests/fixtures/README.md](tests/fixtures/README.md).
 
