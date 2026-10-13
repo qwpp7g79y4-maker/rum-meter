@@ -1,9 +1,10 @@
 //! Tier prices from a user-supplied JSON file, and the monthly estimate.
 //!
 //! Shape: `{ "currency": "...", "tiers": [ { "name": "...", "price_per_rum_hour": n } ] }`.
-//! A month is RUM × price per RUM-hour × hours (730 unless the caller passes
-//! another value), rounded half away from zero to two decimal places.
-//! A product that is not finite, or that does not fit in the cent amount,
+//! `price_per_rum_hour` is the exact decimal from the JSON number, not a binary
+//! float. A month is RUM × price per RUM-hour × hours (730 unless the caller
+//! passes another value), rounded half away from zero to two decimal places.
+//! A product that is negative, or that does not fit in the cent amount,
 //! is [`CostOverflow`]: the amount is never clamped.
 //! The program has no built-in prices. Error text is the path and the kind of
 //! problem, never bytes from the file.
@@ -18,12 +19,14 @@ use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-use bigdecimal::{BigDecimal, RoundingMode, ToPrimitive};
+use bigdecimal::{BigDecimal, RoundingMode, ToPrimitive, Zero, num_bigint::Sign};
+use serde::Deserialize;
+use serde_json::value::RawValue;
 
 /// Hours in the monthly estimate when `--hours-per-month` is absent.
 pub const DEFAULT_HOURS_PER_MONTH: u64 = 730;
 
-/// A price list read from disk. `price_per_rum_hour` is the number from the file.
+/// A price list read from disk. `price_per_rum_hour` is the exact decimal from the file.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PriceList {
     pub currency: String,
@@ -34,7 +37,8 @@ pub struct PriceList {
 #[derive(Debug, Clone, PartialEq)]
 pub struct TierPrice {
     pub name: String,
-    pub price_per_rum_hour: f64,
+    /// Exact decimal from the JSON number. Not a binary float.
+    pub price_per_rum_hour: BigDecimal,
 }
 
 /// One tier of the monthly estimate. `amount` is already rounded to two decimals.
@@ -72,7 +76,7 @@ pub fn monthly_costs(
                 currency: prices.currency.clone(),
                 amount: format_cents(monthly_cents(
                     rum,
-                    tier.price_per_rum_hour,
+                    &tier.price_per_rum_hour,
                     hours_per_month,
                 )?),
             })
@@ -81,23 +85,29 @@ pub fn monthly_costs(
 }
 
 /// Rounded monthly amount in cents. `diff` subtracts these integers.
+///
+/// `price_per_rum_hour` is the exact decimal from the file, so `1.005` rounds
+/// to 1.01 and `0.004999999999999999999` stays below half a cent.
 pub(crate) fn monthly_cents(
     rum: u64,
-    price_per_rum_hour: f64,
+    price_per_rum_hour: &BigDecimal,
     hours_per_month: u64,
 ) -> Result<u64, CostOverflow> {
-    if !price_per_rum_hour.is_finite() || price_per_rum_hour < 0.0 {
+    if is_negative(price_per_rum_hour) {
         return Err(CostOverflow);
     }
-    // Use the price's decimal representation so values such as 1.005 round
-    // to 1.01. Binary float multiplication can put a half cent below the tie,
-    // lose integer precision, or overflow before multiplying by zero hours.
-    let price = BigDecimal::from_str(&price_per_rum_hour.to_string()).map_err(|_| CostOverflow)?;
-    let scaled = BigDecimal::from(rum) * price * BigDecimal::from(hours_per_month) * 100u32;
+    let scaled = BigDecimal::from(rum)
+        * price_per_rum_hour.clone()
+        * BigDecimal::from(hours_per_month)
+        * BigDecimal::from(100u32);
     scaled
         .with_scale_round(0, RoundingMode::HalfUp)
         .to_u64()
         .ok_or(CostOverflow)
+}
+
+fn is_negative(price: &BigDecimal) -> bool {
+    price.sign() == Sign::Minus && !Zero::is_zero(price)
 }
 
 fn format_cents(cents: u64) -> String {
@@ -278,11 +288,32 @@ pub fn load_prices(path: &Path) -> Result<PriceList, PriceError> {
     parse_bytes(&bytes).map_err(|err| err.with_path(path))
 }
 
+/// Fields kept as raw JSON so a price number is not parsed as `f64`.
+#[derive(Deserialize)]
+struct PriceFields<'a> {
+    #[serde(default, borrow)]
+    currency: Option<&'a RawValue>,
+    #[serde(default, borrow)]
+    tiers: Option<&'a RawValue>,
+}
+
+/// One tier, still raw. `name` and the price are checked after this.
+#[derive(Deserialize)]
+struct TierFields<'a> {
+    #[serde(default, borrow)]
+    name: Option<&'a RawValue>,
+    #[serde(default, borrow)]
+    price_per_rum_hour: Option<&'a RawValue>,
+}
+
 /// One leading UTF-8 BOM is skipped; UTF-16 and UTF-32 are refused.
+///
+/// Prices stay raw JSON numbers until [`parse_price`], so a decimal such as
+/// `0.004999999999999999999` is not rounded to a binary float first.
 fn parse_bytes(bytes: &[u8]) -> Result<PriceList, ParseError> {
     let bytes = crate::encoding::utf8_body(bytes).map_err(ParseError::NotUtf8)?;
-    let value = match serde_json::from_slice::<serde_json::Value>(bytes) {
-        Ok(value) => value,
+    let root: Box<RawValue> = match serde_json::from_slice(bytes) {
+        Ok(root) => root,
         Err(err) => {
             return Err(ParseError::InvalidJson {
                 line: err.line(),
@@ -290,21 +321,29 @@ fn parse_bytes(bytes: &[u8]) -> Result<PriceList, ParseError> {
             });
         }
     };
-    let Some(obj) = value.as_object() else {
+    // A JSON array would otherwise fill these fields in order.
+    if raw_is_array(root.get()) {
         return Err(ParseError::Invalid);
+    }
+    let fields: PriceFields<'_> =
+        serde_json::from_str(root.get()).map_err(|_| ParseError::Invalid)?;
+    let currency = match fields.currency {
+        Some(raw) => match serde_json::from_str::<String>(raw.get()) {
+            Ok(text) if !text.is_empty() => text,
+            _ => return Err(ParseError::EmptyCurrency),
+        },
+        None => return Err(ParseError::EmptyCurrency),
     };
-    let currency = match obj.get("currency") {
-        Some(serde_json::Value::String(text)) if !text.is_empty() => text.clone(),
-        _ => return Err(ParseError::EmptyCurrency),
-    };
-    let Some(tiers) = obj.get("tiers").and_then(serde_json::Value::as_array) else {
+    let Some(tiers_raw) = fields.tiers else {
         return Err(ParseError::NoTiers);
     };
+    let tiers: Vec<Box<RawValue>> =
+        serde_json::from_str(tiers_raw.get()).map_err(|_| ParseError::NoTiers)?;
     if tiers.is_empty() {
         return Err(ParseError::NoTiers);
     }
     let mut parsed = Vec::with_capacity(tiers.len());
-    for tier in tiers {
+    for tier in &tiers {
         parsed.push(parse_tier(tier)?);
     }
     Ok(PriceList {
@@ -313,16 +352,27 @@ fn parse_bytes(bytes: &[u8]) -> Result<PriceList, ParseError> {
     })
 }
 
-fn parse_tier(value: &serde_json::Value) -> Result<TierPrice, ParseError> {
-    let Some(obj) = value.as_object() else {
+fn raw_is_array(raw: &str) -> bool {
+    raw.bytes()
+        .find(|byte| !matches!(byte, b' ' | b'\t' | b'\n' | b'\r'))
+        == Some(b'[')
+}
+
+fn parse_tier(raw: &RawValue) -> Result<TierPrice, ParseError> {
+    if raw_is_array(raw.get()) {
         return Err(ParseError::TierNotObject);
+    }
+    let fields: TierFields<'_> =
+        serde_json::from_str(raw.get()).map_err(|_| ParseError::TierNotObject)?;
+    let name = match fields.name {
+        Some(raw) => match serde_json::from_str::<String>(raw.get()) {
+            Ok(text) if !text.is_empty() => text,
+            _ => return Err(ParseError::EmptyTierName),
+        },
+        None => return Err(ParseError::EmptyTierName),
     };
-    let name = match obj.get("name") {
-        Some(serde_json::Value::String(text)) if !text.is_empty() => text.clone(),
-        _ => return Err(ParseError::EmptyTierName),
-    };
-    let price = match obj.get("price_per_rum_hour") {
-        Some(value) => parse_price(value)?,
+    let price = match fields.price_per_rum_hour {
+        Some(raw) => parse_price(raw.get())?,
         None => return Err(ParseError::NonNumericPrice),
     };
     Ok(TierPrice {
@@ -331,14 +381,16 @@ fn parse_tier(value: &serde_json::Value) -> Result<TierPrice, ParseError> {
     })
 }
 
-fn parse_price(value: &serde_json::Value) -> Result<f64, ParseError> {
-    let Some(price) = value.as_f64() else {
-        return Err(ParseError::NonNumericPrice);
-    };
-    if !price.is_finite() {
+/// `raw` is one JSON value. A number is kept digit for digit. Anything else,
+/// including a string, is not a price.
+fn parse_price(raw: &str) -> Result<BigDecimal, ParseError> {
+    let text = raw.trim();
+    let digits = text.strip_prefix('-').unwrap_or(text);
+    if !digits.starts_with(|ch: char| ch.is_ascii_digit()) {
         return Err(ParseError::NonNumericPrice);
     }
-    if price < 0.0 {
+    let price = BigDecimal::from_str(text).map_err(|_| ParseError::NonNumericPrice)?;
+    if is_negative(&price) {
         return Err(ParseError::NegativePrice);
     }
     Ok(price)
@@ -371,8 +423,14 @@ fn io_kind_label(kind: ErrorKind) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bigdecimal::BigDecimal;
+    use std::str::FromStr;
 
     const CANARY: &str = "CANARY-SECRET-PR";
+
+    fn dec(text: &str) -> BigDecimal {
+        BigDecimal::from_str(text).unwrap_or_else(|_| panic!("decimal {text}"))
+    }
 
     fn write_price_file(name: &str, body: &str) -> PathBuf {
         let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -404,9 +462,9 @@ mod tests {
         assert_eq!(prices.currency, "EUR");
         assert_eq!(prices.tiers.len(), 2);
         assert_eq!(prices.tiers[0].name, "small");
-        assert_eq!(prices.tiers[0].price_per_rum_hour, 1.25);
+        assert_eq!(prices.tiers[0].price_per_rum_hour, dec("1.25"));
         assert_eq!(prices.tiers[1].name, "large");
-        assert_eq!(prices.tiers[1].price_per_rum_hour, 0.0);
+        assert_eq!(prices.tiers[1].price_per_rum_hour, dec("0"));
         assert!(!format!("{prices:?}").contains(CANARY));
     }
 
@@ -514,14 +572,14 @@ mod tests {
         assert!(matches!(err, PriceError::Invalid { .. }));
     }
 
-    fn sample(currency: &str, tiers: &[(&str, f64)]) -> PriceList {
+    fn sample(currency: &str, tiers: &[(&str, &str)]) -> PriceList {
         PriceList {
             currency: currency.to_string(),
             tiers: tiers
                 .iter()
                 .map(|(name, price)| TierPrice {
                     name: (*name).to_string(),
-                    price_per_rum_hour: *price,
+                    price_per_rum_hour: dec(price),
                 })
                 .collect(),
         }
@@ -543,18 +601,18 @@ mod tests {
     #[test]
     fn monthly_amount_is_rum_times_price_times_hours() {
         assert_eq!(DEFAULT_HOURS_PER_MONTH, 730);
-        let costs = monthly_costs(2, &sample("EUR", &[("exact", 1.5), ("free", 0.0)]), 730)
+        let costs = monthly_costs(2, &sample("EUR", &[("exact", "1.5"), ("free", "0")]), 730)
             .expect("cost fits");
         assert_eq!(
             amounts(&costs),
             vec![("exact", "EUR", "2190.00"), ("free", "EUR", "0.00")]
         );
         assert_eq!(
-            monthly_costs(0, &sample("EUR", &[("n", 4.0)]), 730).expect("cost fits")[0].amount,
+            monthly_costs(0, &sample("EUR", &[("n", "4")]), 730).expect("cost fits")[0].amount,
             "0.00"
         );
         assert_eq!(
-            monthly_costs(9, &sample("EUR", &[("n", 4.0)]), 0).expect("cost fits")[0].amount,
+            monthly_costs(9, &sample("EUR", &[("n", "4")]), 0).expect("cost fits")[0].amount,
             "0.00"
         );
     }
@@ -563,15 +621,16 @@ mod tests {
     fn monthly_amount_rounds_half_away_from_zero_to_two_decimals() {
         // 0.125 → 0.13; 0.0625 → 0.06; 3 × 0.0625 × 10 = 1.875 → 1.88.
         assert_eq!(
-            monthly_costs(1, &sample("EUR", &[("half", 0.125)]), 1).expect("cost fits")[0].amount,
+            monthly_costs(1, &sample("EUR", &[("half", "0.125")]), 1).expect("cost fits")[0].amount,
             "0.13"
         );
         assert_eq!(
-            monthly_costs(1, &sample("EUR", &[("down", 0.0625)]), 1).expect("cost fits")[0].amount,
+            monthly_costs(1, &sample("EUR", &[("down", "0.0625")]), 1).expect("cost fits")[0]
+                .amount,
             "0.06"
         );
         assert_eq!(
-            monthly_costs(3, &sample("EUR", &[("product", 0.0625)]), 10).expect("cost fits")[0]
+            monthly_costs(3, &sample("EUR", &[("product", "0.0625")]), 10).expect("cost fits")[0]
                 .amount,
             "1.88"
         );
@@ -579,23 +638,32 @@ mod tests {
 
     #[test]
     fn decimal_rounding_and_integer_precision_are_preserved() {
-        assert_eq!(monthly_cents(1, 1.005, 1), Ok(101));
-        assert_eq!(monthly_cents(1, 0.145, 1), Ok(15));
-        assert_eq!(monthly_cents(1, 1.0049, 1), Ok(100));
-        assert_eq!(monthly_cents(3, 0.005, 1), Ok(2));
-        assert_eq!(monthly_cents(u64::MAX, 0.01, 1), Ok(u64::MAX));
-        assert_eq!(monthly_cents(1, 0.01, u64::MAX), Ok(u64::MAX));
-        assert_eq!(monthly_cents(u64::MAX, 0.01, 2), Err(CostOverflow));
+        assert_eq!(monthly_cents(1, &dec("1.005"), 1), Ok(101));
+        assert_eq!(monthly_cents(1, &dec("0.145"), 1), Ok(15));
+        assert_eq!(monthly_cents(1, &dec("1.0049"), 1), Ok(100));
+        assert_eq!(monthly_cents(3, &dec("0.005"), 1), Ok(2));
+        assert_eq!(monthly_cents(u64::MAX, &dec("0.01"), 1), Ok(u64::MAX));
+        assert_eq!(monthly_cents(1, &dec("0.01"), u64::MAX), Ok(u64::MAX));
+        assert_eq!(monthly_cents(u64::MAX, &dec("0.01"), 2), Err(CostOverflow));
+    }
+
+    #[test]
+    fn price_below_half_a_cent_stays_exact() {
+        let body = r#"{"currency":"EUR","tiers":[{"name":"tier","price_per_rum_hour":0.004999999999999999999}]}"#;
+        let prices = load_body("below-half-cent.json", body).expect("price");
+        assert_eq!(
+            monthly_cents(1, &prices.tiers[0].price_per_rum_hour, 1),
+            Ok(0)
+        );
+        assert_eq!(monthly_costs(1, &prices, 1).unwrap()[0].amount, "0.00");
     }
 
     #[test]
     fn extreme_prices_and_zero_factors() {
-        assert_eq!(monthly_cents(2, 1e308, 0), Ok(0));
-        assert_eq!(monthly_cents(0, 1e308, u64::MAX), Ok(0));
-        assert_eq!(monthly_cents(u64::MAX, 1e-308, u64::MAX), Ok(0));
-        assert_eq!(monthly_cents(1, 1e308, 1), Err(CostOverflow));
-        for price in [-1.0, f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
-            assert_eq!(monthly_cents(0, price, 0), Err(CostOverflow));
-        }
+        assert_eq!(monthly_cents(2, &dec("1e308"), 0), Ok(0));
+        assert_eq!(monthly_cents(0, &dec("1e308"), u64::MAX), Ok(0));
+        assert_eq!(monthly_cents(u64::MAX, &dec("1e-308"), u64::MAX), Ok(0));
+        assert_eq!(monthly_cents(1, &dec("1e308"), 1), Err(CostOverflow));
+        assert_eq!(monthly_cents(0, &dec("-1"), 0), Err(CostOverflow));
     }
 }

@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- A price is read as the exact decimal from the file. 1 RUM at 0.004999999999999999999 for 1 hour is 0.00. 1 RUM at 1.005 for 1 hour stays 1.01.
+- A state whose root value is a JSON array is refused with exit 2, `state is not an object`.
+- `count` refuses a repeated address across the files it is given, including the same file twice.
+
 ## [0.1.0] - 2026-10-11
 
 ### Added

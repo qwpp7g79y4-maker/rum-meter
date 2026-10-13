@@ -60,7 +60,7 @@ Other price-file failures, each one line on stderr and nothing on stdout:
 - the path cannot be opened: `unreadable (not found)`, `unreadable (permission denied)`, `unreadable (is a directory)` or `unreadable (io error)`
 - the bytes are not JSON: `invalid json at line L column C`
 
-A month is RUM times the price per RUM-hour times the hours. The default is 730 hours. The calculation uses decimal arithmetic, so 1 RUM at 1.005 for 1 hour is `1.01`. The product is multiplied by 100 and rounded half away from zero to a whole number of cents, then shown as a number of euros, a point, and two digits. `diff` subtracts those cent integers. A positive cost delta is prefixed with `+`, a negative delta with `-`, and zero has no sign. 0 hours gives `0.00`. 1 RUM at 0.125 for 1 hour is `0.13`. 1 RUM at 0.0625 for 1 hour is `0.06`.
+A month is RUM times the price per RUM-hour times the hours. The default is 730 hours. The price is the exact decimal from the file, so 1 RUM at `0.004999999999999999999` for 1 hour is `0.00`. The calculation uses decimal arithmetic, so 1 RUM at 1.005 for 1 hour is `1.01`. The product is multiplied by 100 and rounded half away from zero to a whole number of cents, then shown as a number of euros, a point, and two digits. `diff` subtracts those cent integers. A positive cost delta is prefixed with `+`, a negative delta with `-`, and zero has no sign. 0 hours gives `0.00`. 1 RUM at 0.125 for 1 hour is `0.13`. 1 RUM at 0.0625 for 1 hour is `0.06`.
 
 On the example file, 1 RUM for 730 hours is `730.00` and `365.00`. For 720 hours it is `720.00` and `360.00`. Those amounts follow from the example file, not from a HashiCorp price list.
 
@@ -70,7 +70,7 @@ A product that is not finite, is negative, or does not fit in the cent amount is
 
 ## State file
 
-Only state format version 4 is accepted, and `version` has to be a number. A string is `invalid json at line L column C`. Any other number is `state version is not 4`.
+Only state format version 4 is accepted, and `version` has to be a number. The root value has to be a JSON object. A JSON array is `state is not an object`. A string is `invalid json at line L column C`. Any other number is `state version is not 4`.
 
 The reader stores `version`, and for each resource `mode`, `type`, `name`, `module` and `instances`. For each instance it stores `index_key` (a number or a string), the `deposed` key, and whether `status` is exactly the string `tainted`. Any other status is dropped. Unknown JSON fields are ignored. `attributes`, `sensitive_attributes`, `private` and `outputs` are not deserialized and are never stored.
 
@@ -78,7 +78,7 @@ The file must be UTF-8; the same holds for a price file. A leading UTF-8 BOM (th
 
 Only a regular file is read. `metadata().is_file()` runs before any byte is read, for a state and for a price file. A directory, a FIFO or a device is `not a regular file`. That is why a pipe or process substitution does not work. A missing path is `unreadable (not found)`. The other unreadable kinds are `permission denied`, `is a directory` and `io error`.
 
-Each address may occur once. A repeat, at the root, in a module, with count or for_each, or as a deposed object, is exit 2: `duplicate address`, plus the address. Control characters in that address are written as `\u00XX`. Attribute values are not included. The first repeat in verdict order is the one reported. On `diff`, added and removed therefore still add up to the RUM delta. Text output escapes control characters the same way. JSON keeps the characters and lets the JSON encoder escape them.
+Each address may occur once, in one file and across the files passed to `count`. A repeat, at the root, in a module, with count or for_each, as a deposed object, or in a later file, is exit 2: `duplicate address`, plus the address. Control characters in that address are written as `\u00XX`. Attribute values are not included. The first repeat in verdict order is the one reported. On `diff`, added and removed therefore still add up to the RUM delta. Text output escapes control characters the same way. JSON keeps the characters and lets the JSON encoder escape them.
 
 ## How it counts
 
@@ -108,7 +108,7 @@ The line `not counted: R2 n, R3 n, R4 n` is printed for the file and again for t
 
 `diff` compares addresses. Added lines are counting addresses in the new state that the old state does not have. Removed lines are counting addresses in the old state that the new state does not have. A changed rule is the same address with a different rule code, whether or not the instance counts. Those three lists are in address order. `rum delta` is new RUM minus old RUM, with a `+` when the number is positive. The text report does not repeat the module list. In JSON, `by_module` and `by_type` describe the new state.
 
-Several files passed to `count` are summed. The sum is not per hour and not per organization. "HCP Terraform combines workspace and Stacks resources under management when calculating costs". Stacks state is not supported. "Each partial hour is billed as a full hour". Rounding per hour is not modeled. The free plan with at most 500 managed resources is a limit, not a price.
+Several files passed to `count` are summed. An address that also occurs in another of those files is not summed. The sum is not per hour and not per organization. "HCP Terraform combines workspace and Stacks resources under management when calculating costs". Stacks state is not supported. "Each partial hour is billed as a full hour". Rounding per hour is not modeled. The free plan with at most 500 managed resources is a limit, not a price.
 
 The text always ends with `estimate: HCP Terraform bills the hourly peak; this is a single snapshot`. JSON uses the same sentence without the `estimate:` prefix.
 
@@ -130,7 +130,7 @@ Text reports and error messages escape control characters, and invisible or bidi
 | --- | --- |
 | 0 | Success. An equal threshold is included. |
 | 1 | Threshold: summed RUM above `--max-rum` on count, or the RUM increase above `--max-increase` on diff. The report is still printed. |
-| 2 | Input error: unreadable file, not a regular file, invalid JSON, state version not 4, UTF-16 or UTF-32, a duplicate address, an invalid price file, or a cost that overflows. Stdout is empty. |
+| 2 | Input error: unreadable file, not a regular file, invalid JSON, a state that is not a JSON object, state version not 4, UTF-16 or UTF-32, a duplicate address, an invalid price file, or a cost that overflows. Stdout is empty. |
 | 3 | Usage error, including a flag that would not change the report. Stdout is empty. |
 
 A report that cannot be written or flushed to stdout also exits 2, with `rum-meter: cannot write report to stdout`. Some report bytes may already have been written when the failure occurs.

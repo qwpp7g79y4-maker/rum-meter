@@ -5,6 +5,9 @@
 //! is dropped. Attribute values, sensitive attributes, private data and
 //! outputs are not stored.
 //!
+//! The root value has to be a JSON object. A JSON array is refused: serde
+//! would otherwise read the elements as positional fields.
+//!
 //! A leading UTF-8 BOM is skipped. UTF-16 and UTF-32, with or without a BOM,
 //! are refused: the file has to be saved as UTF-8. The bytes are not decoded.
 //! See [`crate::encoding`].
@@ -103,6 +106,10 @@ pub enum LoadError {
     UnsupportedVersion {
         path: PathBuf,
     },
+    /// Valid JSON whose root is an array, not an object.
+    NotObject {
+        path: PathBuf,
+    },
     /// UTF-16 or UTF-32. Nothing was decoded.
     NotUtf8 {
         path: PathBuf,
@@ -114,6 +121,7 @@ pub enum LoadError {
 enum ParseError {
     InvalidJson { line: usize, column: usize },
     UnsupportedVersion,
+    NotObject,
     NotUtf8(crate::encoding::Wide),
 }
 
@@ -171,6 +179,13 @@ impl fmt::Display for LoadError {
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
+            Self::NotObject { path } => {
+                write!(
+                    f,
+                    "rum-meter: {}: state is not an object",
+                    crate::rum::escape_controls(&path.display().to_string())
+                )
+            }
             Self::NotUtf8 { path, encoding } => {
                 write!(
                     f,
@@ -197,12 +212,24 @@ pub fn load_state(path: &Path) -> Result<State, LoadError> {
     parse_bytes(&bytes).map_err(|err| match err {
         ParseError::InvalidJson { line, column } => LoadError::invalid_json(path, line, column),
         ParseError::UnsupportedVersion => LoadError::unsupported_version(path),
+        ParseError::NotObject => LoadError::NotObject {
+            path: path.to_path_buf(),
+        },
         ParseError::NotUtf8(wide) => LoadError::not_utf8(path, wide),
     })
 }
 
 fn parse_bytes(bytes: &[u8]) -> Result<State, ParseError> {
     let bytes = crate::encoding::utf8_body(bytes).map_err(ParseError::NotUtf8)?;
+    if json_root_is_array(bytes) {
+        return match serde_json::from_slice::<serde_json::Value>(bytes) {
+            Ok(_) => Err(ParseError::NotObject),
+            Err(err) => Err(ParseError::InvalidJson {
+                line: err.line(),
+                column: err.column(),
+            }),
+        };
+    }
     let state: State = serde_json::from_slice(bytes).map_err(|err| ParseError::InvalidJson {
         line: err.line(),
         column: err.column(),
@@ -211,6 +238,15 @@ fn parse_bytes(bytes: &[u8]) -> Result<State, ParseError> {
         return Err(ParseError::UnsupportedVersion);
     }
     Ok(state)
+}
+
+/// JSON whitespace, then `[`. An object starts with `{` and is left to serde.
+fn json_root_is_array(bytes: &[u8]) -> bool {
+    bytes
+        .iter()
+        .copied()
+        .find(|byte| !matches!(byte, b' ' | b'\t' | b'\n' | b'\r'))
+        == Some(b'[')
 }
 
 /// `metadata().is_file()` before any read. A FIFO would block in `fs::read`
@@ -406,5 +442,12 @@ mod tests {
             err,
             ParseError::InvalidJson { line: 1, column: 0 }
         ));
+    }
+
+    #[test]
+    fn json_array_state_is_refused() {
+        let err = parse_bytes(br#"[4,[["managed","random_id","x",null,[[null,null,null]]]]]"#)
+            .unwrap_err();
+        assert_eq!(err, ParseError::NotObject);
     }
 }

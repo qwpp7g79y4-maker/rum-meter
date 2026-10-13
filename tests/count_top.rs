@@ -118,22 +118,13 @@ fn fixture_top_3_merges_the_rest_into_other() {
 }
 
 #[test]
-fn two_copies_of_the_fixture_sum_before_top() {
-    let stdout = assert_count_ok(&run(&["count", "--top", "3", FIXTURE, FIXTURE]));
-    assert_eq!(stdout.lines().filter(|line| *line == "rum: 16").count(), 2);
-    assert!(stdout.lines().any(|line| line == "total rum: 32"));
-    let modules = group(&stdout, "modules");
-    let types = group(&stdout, "types");
+fn two_copies_of_the_fixture_are_a_duplicate_address() {
+    let output = run(&["count", "--top", "3", FIXTURE, FIXTURE]);
+    let stderr = String::from_utf8(output.stderr).expect("stderr is utf-8");
+    assert_eq!(output.status.code(), Some(2), "{stderr}");
+    assert!(output.stdout.is_empty(), "{stderr}");
     assert_eq!(
-        &modules[..3],
-        ["module.compute: 10", "module.network: 10", "module.app: 6",]
+        stderr,
+        "rum-meter: tests/fixtures/v4_top.json: duplicate address null_resource.skip[0]\n"
     );
-    assert_eq!(other_count(&modules), (2 + 1) * 2);
-    assert_eq!(
-        &types[..3],
-        ["local_file: 8", "random_id: 8", "random_integer: 6",]
-    );
-    assert_eq!(other_count(&types), (3 + 2) * 2);
-    assert_eq!(modules.iter().copied().map(row_count).sum::<usize>(), 32);
-    assert_eq!(types.iter().copied().map(row_count).sum::<usize>(), 32);
 }

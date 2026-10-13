@@ -62,7 +62,7 @@ Andere fouten in het prijsbestand, elk één regel op stderr en niets op stdout:
 - het pad gaat niet open: `unreadable (not found)`, `unreadable (permission denied)`, `unreadable (is a directory)` of `unreadable (io error)`
 - de bytes zijn geen JSON: `invalid json at line L column C`
 
-Een maand is RUM maal de prijs per RUM-uur maal de uren. Standaard is dat 730 uur. De berekening gebruikt decimale rekenkunde: 1 RUM tegen 1.005 voor 1 uur is `1.01`. Het product wordt met 100 vermenigvuldigd en half away from zero afgerond op een heel aantal centen, en daarna getoond als euro's, een punt, en twee cijfers. `diff` trekt die centgehelen van elkaar af. Een positieve kostendelta krijgt een `+`, een negatieve een `-`, en nul heeft geen teken. 0 uur geeft `0.00`. 1 RUM tegen 0.125 voor 1 uur is `0.13`. 1 RUM tegen 0.0625 voor 1 uur is `0.06`.
+Een maand is RUM maal de prijs per RUM-uur maal de uren. Standaard is dat 730 uur. De prijs is het exacte decimale getal uit het bestand, dus 1 RUM tegen `0.004999999999999999999` voor 1 uur is `0.00`. De berekening gebruikt decimale rekenkunde: 1 RUM tegen 1.005 voor 1 uur is `1.01`. Het product wordt met 100 vermenigvuldigd en half away from zero afgerond op een heel aantal centen, en daarna getoond als euro's, een punt, en twee cijfers. `diff` trekt die centgehelen van elkaar af. Een positieve kostendelta krijgt een `+`, een negatieve een `-`, en nul heeft geen teken. 0 uur geeft `0.00`. 1 RUM tegen 0.125 voor 1 uur is `0.13`. 1 RUM tegen 0.0625 voor 1 uur is `0.06`.
 
 Op het voorbeeldbestand is 1 RUM voor 730 uur `730.00` en `365.00`. Voor 720 uur is dat `720.00` en `360.00`. Die bedragen volgen uit het voorbeeldbestand, niet uit een prijslijst van HashiCorp.
 
@@ -72,7 +72,7 @@ Een product dat niet eindig is, negatief is, of niet in het centbedrag past, is 
 
 ## Statebestand
 
-Alleen stateformaat versie 4 wordt aanvaard, en `version` moet een getal zijn. Een tekst is `invalid json at line L column C`. Elk ander getal is `state version is not 4`.
+Alleen stateformaat versie 4 wordt aanvaard, en `version` moet een getal zijn. De wortel moet een JSON-object zijn. Een JSON-array is `state is not an object`. Een tekst is `invalid json at line L column C`. Elk ander getal is `state version is not 4`.
 
 De lezer bewaart `version`, en per resource `mode`, `type`, `name`, `module` en `instances`. Per instantie bewaart hij `index_key` (een getal of een tekst), de `deposed`-sleutel, en of `status` precies de tekst `tainted` is. Elke andere status vervalt. Onbekende JSON-velden worden genegeerd. `attributes`, `sensitive_attributes`, `private` en `outputs` worden niet gedeserialiseerd en nooit bewaard.
 
@@ -80,7 +80,7 @@ Het bestand moet UTF-8 zijn; dat geldt ook voor een prijsbestand. Een UTF-8 BOM 
 
 Alleen een gewoon bestand wordt gelezen. `metadata().is_file()` draait vóór er een byte wordt gelezen, voor een state en voor een prijsbestand. Een map, een FIFO of een apparaat is `not a regular file`. Daarom werken een pipe en process substitution niet. Een ontbrekend pad is `unreadable (not found)`. De andere onleesbare soorten zijn `permission denied`, `is a directory` en `io error`.
 
-Elk adres mag één keer voorkomen. Een herhaling, op root, in een module, met count of for_each, of als deposed object, is exit 2: `duplicate address`, plus het adres. Stuurtekens in dat adres worden geschreven als `\u00XX`. Attribuutwaarden zitten er niet bij. De eerste herhaling in de volgorde van de beslissingen wordt gemeld. Bij `diff` blijven added en removed daardoor optellen tot de RUM-delta. Tekstuitvoer escapt stuurtekens op dezelfde manier. JSON houdt de tekens en laat de JSON-encoder ze escapen.
+Elk adres mag één keer voorkomen, in één bestand en over de bestanden die aan `count` worden meegegeven. Een herhaling, op root, in een module, met count of for_each, als deposed object, of in een later bestand, is exit 2: `duplicate address`, plus het adres. Stuurtekens in dat adres worden geschreven als `\u00XX`. Attribuutwaarden zitten er niet bij. De eerste herhaling in de volgorde van de beslissingen wordt gemeld. Bij `diff` blijven added en removed daardoor optellen tot de RUM-delta. Tekstuitvoer escapt stuurtekens op dezelfde manier. JSON houdt de tekens en laat de JSON-encoder ze escapen.
 
 ## Hoe het rekent
 
@@ -110,7 +110,7 @@ De regel `not counted: R2 n, R3 n, R4 n` wordt voor het bestand afgedrukt en nog
 
 `diff` vergelijkt adressen. Added zijn tellende adressen in de nieuwe state die de oude state niet heeft. Removed zijn tellende adressen in de oude state die de nieuwe state niet heeft. Een gewijzigde regel is hetzelfde adres met een andere regelcode, of de instantie nu telt of niet. Die drie lijsten staan op adresvolgorde. `rum delta` is nieuwe RUM min oude RUM, met een `+` als het getal positief is. Het tekstrapport herhaalt de modulelijst niet. In JSON beschrijven `by_module` en `by_type` de nieuwe state.
 
-Meerdere bestanden aan `count` worden opgeteld. De som is niet per uur en niet per organisatie. "HCP Terraform combines workspace and Stacks resources under management when calculating costs". Stacks-state wordt niet ondersteund. "Each partial hour is billed as a full hour". Afronden per uur is niet gemodelleerd. Het gratis plan met maximaal 500 managed resources is een limiet, geen prijs.
+Meerdere bestanden aan `count` worden opgeteld. Een adres dat ook in een ander van die bestanden staat, wordt niet opgeteld. De som is niet per uur en niet per organisatie. "HCP Terraform combines workspace and Stacks resources under management when calculating costs". Stacks-state wordt niet ondersteund. "Each partial hour is billed as a full hour". Afronden per uur is niet gemodelleerd. Het gratis plan met maximaal 500 managed resources is een limiet, geen prijs.
 
 De tekst eindigt altijd op `estimate: HCP Terraform bills the hourly peak; this is a single snapshot`. JSON gebruikt dezelfde zin zonder het voorvoegsel `estimate:`.
 
@@ -132,7 +132,7 @@ Tekstrapporten en foutmeldingen escapen stuurtekens, en onzichtbare of tekstrich
 | --- | --- |
 | 0 | Gelukt. Een gelijke drempel hoort daarbij. |
 | 1 | Drempel: opgetelde RUM boven `--max-rum` bij count, of de RUM-stijging boven `--max-increase` bij diff. Het rapport wordt toch afgedrukt. |
-| 2 | Invoerfout: onleesbaar bestand, geen gewoon bestand, ongeldige JSON, stateversie niet 4, UTF-16 of UTF-32, een dubbel adres, een ongeldig prijsbestand, of kosten die overlopen. Stdout is leeg. |
+| 2 | Invoerfout: onleesbaar bestand, geen gewoon bestand, ongeldige JSON, een state die geen JSON-object is, stateversie niet 4, UTF-16 of UTF-32, een dubbel adres, een ongeldig prijsbestand, of kosten die overlopen. Stdout is leeg. |
 | 3 | Gebruiksfout, ook een vlag die het rapport niet zou veranderen. Stdout is leeg. |
 
 Als het rapport niet naar stdout geschreven of geflusht kan worden, is de exitcode ook 2, met `rum-meter: cannot write report to stdout`. Er kan dan al een deel van het rapport geschreven zijn.

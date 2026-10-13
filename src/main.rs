@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fmt;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
@@ -143,6 +144,10 @@ impl fmt::Display for CliError {
 }
 
 /// A repeated address is an input error. Checked before any report is printed.
+///
+/// `count` uses [`reject_repeated_address`], which also refuses the same
+/// address when a later file repeats it. `diff` checks each file on its own,
+/// because the old and new states are compared, not added.
 fn reject_duplicate(path: &Path, verdicts: &[rum_meter::rum::Verdict]) -> Result<(), CliError> {
     match rum_meter::rum::find_duplicate_address(verdicts) {
         Some(address) => Err(CliError::DuplicateAddress {
@@ -151,6 +156,25 @@ fn reject_duplicate(path: &Path, verdicts: &[rum_meter::rum::Verdict]) -> Result
         }),
         None => Ok(()),
     }
+}
+
+/// The same address in one file, or in a later file passed to `count`, is an
+/// input error. The path is the file that repeats the address.
+fn reject_repeated_address(
+    files: &[(&Path, Vec<rum_meter::rum::Verdict>)],
+) -> Result<(), CliError> {
+    let mut seen = HashSet::new();
+    for (path, verdicts) in files {
+        for verdict in verdicts {
+            if !seen.insert(verdict.address.as_str()) {
+                return Err(CliError::DuplicateAddress {
+                    path: path.to_path_buf(),
+                    address: verdict.address.clone(),
+                });
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Result of a report that was printed. A threshold breach is exit 1, not an error line.
@@ -211,9 +235,7 @@ fn execute(cli: &Cli) -> Result<RunOutcome, CliError> {
                 .iter()
                 .map(|(path, state)| (*path, rum_meter::rum::classify(state)))
                 .collect();
-            for (path, verdicts) in &counted {
-                reject_duplicate(path, verdicts)?;
-            }
+            reject_repeated_address(&counted)?;
             let files: Vec<_> = counted
                 .iter()
                 .map(|(path, verdicts)| rum_meter::render::CountedFile { path, verdicts })

@@ -240,3 +240,60 @@ fn closed_stdout_returns_an_error_without_panicking() {
         "rum-meter: cannot write report to stdout\n"
     );
 }
+
+#[test]
+fn exact_decimal_price_is_zero_euros() {
+    let prices = write_input(
+        "exact-decimal",
+        "prices.json",
+        r#"{"currency":"EUR","tiers":[{"name":"tier","price_per_rum_hour":0.004999999999999999999}]}"#,
+    );
+    let output = run("count", &fixture(), &prices, false, "1");
+    assert!(output.status.success(), "{:?}", output.stderr);
+    let text = String::from_utf8(output.stdout).unwrap();
+    assert!(text.contains("EUR 0.00\n"), "{text}");
+    assert!(!text.contains("0.01"), "{text}");
+}
+
+#[test]
+fn json_array_state_exits_2() {
+    let state = write_input(
+        "json-array",
+        "array.json",
+        r#"[4,[["managed","random_id","x",null,[[null,null,null]]]]]"#,
+    );
+    let output = Command::new(env!("CARGO_BIN_EXE_rum-meter"))
+        .arg("count")
+        .arg(&state)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2), "{:?}", output.stdout);
+    assert!(output.stdout.is_empty());
+    let err = String::from_utf8(output.stderr).unwrap();
+    assert!(err.contains("state is not an object"), "{err}");
+    assert!(!err.contains("managed"), "{err}");
+}
+
+#[test]
+fn same_file_twice_is_not_counted_twice() {
+    let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+        .join("regressions")
+        .join("same-file");
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("a.json"),
+        r#"{"version":4,"resources":[{"mode":"managed","type":"random_id","name":"x","instances":[{}]}]}"#,
+    )
+    .unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_rum-meter"))
+        .current_dir(&dir)
+        .args(["count", "a.json", "a.json"])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8(output.stderr).unwrap(),
+        "rum-meter: a.json: duplicate address random_id.x\n"
+    );
+}

@@ -200,17 +200,46 @@ fn check(args: &[&str], canaries: &[String], expect: Expect) {
 fn output_contains_no_fixture_secrets() {
     let canaries = canaries();
 
+    // The two states share random_id.kept[0], so count must not add them.
+    let overlap = Expect {
+        code: 2,
+        stdout_has: &[],
+        stderr_has: &["tests/fixtures/v4_canary_new.json: duplicate address random_id.kept[0]"],
+    };
+    check(&["count", OLD, NEW], &canaries, overlap);
+    check(&["count", "--explain", OLD, NEW], &canaries, overlap);
+    check(&["count", "--json", OLD, NEW], &canaries, overlap);
     check(
-        &["count", OLD, NEW],
+        &["count", "--json", "--explain", OLD, NEW],
+        &canaries,
+        overlap,
+    );
+    check(
+        &["count", "--top", "1", "--explain", OLD, NEW],
+        &canaries,
+        overlap,
+    );
+
+    check(
+        &["count", OLD],
         &canaries,
         Expect {
             code: 0,
-            stdout_has: &["total rum: 5\n", "estimate:"],
+            stdout_has: &["total rum: 3\n", "estimate:"],
             stderr_has: &[],
         },
     );
     check(
-        &["count", "--explain", OLD, NEW],
+        &["count", NEW],
+        &canaries,
+        Expect {
+            code: 0,
+            stdout_has: &["total rum: 2\n", "estimate:"],
+            stderr_has: &[],
+        },
+    );
+    check(
+        &["count", "--explain", NEW],
         &canaries,
         Expect {
             code: 0,
@@ -224,16 +253,25 @@ fn output_contains_no_fixture_secrets() {
         },
     );
     check(
-        &["count", "--json", OLD, NEW],
+        &["count", "--json", OLD],
         &canaries,
         Expect {
             code: 0,
-            stdout_has: &["\"schema_version\": 1", "\"total_rum\": 5"],
+            stdout_has: &["\"schema_version\": 1", "\"total_rum\": 3"],
             stderr_has: &[],
         },
     );
     check(
-        &["count", "--json", "--explain", OLD, NEW],
+        &["count", "--json", NEW],
+        &canaries,
+        Expect {
+            code: 0,
+            stdout_has: &["\"schema_version\": 1", "\"total_rum\": 2"],
+            stderr_has: &[],
+        },
+    );
+    check(
+        &["count", "--json", "--explain", NEW],
         &canaries,
         Expect {
             code: 0,
@@ -245,7 +283,7 @@ fn output_contains_no_fixture_secrets() {
         },
     );
     check(
-        &["count", "--top", "1", "--explain", OLD, NEW],
+        &["count", "--top", "1", "--explain", OLD],
         &canaries,
         Expect {
             code: 0,

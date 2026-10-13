@@ -24,7 +24,7 @@ Synthetic price file, written by hand. It is not a state and not a HashiCorp rat
 
 ## v4_canary_new.json
 
-Synthetic state v4, written by hand. Resources: managed `random_id.kept` with index 0 and 1, data `local_file.note`, managed `null_resource.wait` with index 0, and managed `random_id.absent` in `module.child.module.nested` with 0 instances. Each present instance has `attributes`, `sensitive_attributes` and `private`, and there is an output. The identity fields do not hold the marker. Together with `v4_canary_old.json` this covers `count`, `--explain`, `--json` and `diff` in the safety test.
+Synthetic state v4, written by hand. Resources: managed `random_id.kept` with index 0 and 1, data `local_file.note`, managed `null_resource.wait` with index 0, and managed `random_id.absent` in `module.child.module.nested` with 0 instances. Each present instance has `attributes`, `sensitive_attributes` and `private`, and there is an output. The identity fields do not hold the marker. Each file covers `count`, `--explain` and `--json` in the safety test. Counted together they share `random_id.kept[0]`, so that command is a duplicate address. `diff` still compares the two files.
 
 ## v4_canary_old.json
 

@@ -207,7 +207,7 @@ changed rule:
 estimate: HCP Terraform bills the hourly peak; this is a single snapshot
 ```
 
-Exit code 0 is success. Exit code 1 is a threshold: `--max-rum` on `count`, `--max-increase` on `diff`. The report is still printed. Exit code 2 is an input error (unreadable file, not a regular file, invalid JSON, state version not 4, a duplicate address, UTF-16 or UTF-32, an invalid price file, or a cost that overflows). Exit code 3 is a usage error. A flag that would not change the report is also exit 3, with a fixed message on stderr and nothing on stdout, before the states are read. If several apply, the first of these wins:
+Exit code 0 is success. Exit code 1 is a threshold: `--max-rum` on `count`, `--max-increase` on `diff`. The report is still printed. Exit code 2 is an input error (unreadable file, not a regular file, invalid JSON, a state that is not a JSON object, state version not 4, a duplicate address, UTF-16 or UTF-32, an invalid price file, or a cost that overflows). Exit code 3 is a usage error. A flag that would not change the report is also exit 3, with a fixed message on stderr and nothing on stdout, before the states are read. If several apply, the first of these wins:
 
 - `--max-increase only works with diff`
 - `--max-rum only works with count`
@@ -226,9 +226,9 @@ Every number can be traced back to these rules. The address format, the price fi
 - **R3 does not count:** type `null_resource` or `terraform_data` ("Null Resources" are excluded). Assumption: `terraform_data` falls under "Null Resources".
 - **R4:** a resource block with no instances counts 0.
 - **Deposed:** a deposed object is its own infrastructure object. The address ends with ` (deposed KEY)`, for example `local_file.a (deposed 00000001)`. A counting deposed object stays on R1. A deposed `null_resource` or `terraform_data` stays on R3. There is no separate rule code for it.
-- **Several files** are summed. Only counting instances (R1) enter the module and type lists. The same module path or type from several states is added up.
+- **Several files** are summed. Only counting instances (R1) enter the module and type lists. The same module path or type from several states is added up. The same address in more than one of those files is not summed: that is exit 2, `duplicate address`, with the address. Passing the same file twice is that error.
 - **Share of a list:** rows are ordered by count descending, then by name ascending. `--top N` keeps the first N rows. The rest is one final row `other`. Without `--top`, or when nothing remains, there is no `other` row. An absent or empty module is `(root)`.
-- **Cost:** per month = RUM x price per RUM-hour x hours. The default is 730 hours. Amounts are rounded half away from zero to 2 decimals, and the decimal separator in the output is a point. `diff` subtracts the rounded cent amounts. A product that overflows is exit 2, never a clamped amount.
+- **Cost:** per month = RUM x price per RUM-hour x hours. The default is 730 hours. The price is the exact decimal from the file. 1 RUM at 0.004999999999999999999 for 1 hour is 0.00. 1 RUM at 1.005 for 1 hour is 1.01. Amounts are rounded half away from zero to 2 decimals, and the decimal separator in the output is a point. `diff` subtracts the rounded cent amounts. A product that overflows is exit 2, never a clamped amount.
 - **Estimate:** the text always ends with `estimate: HCP Terraform bills the hourly peak; this is a single snapshot`. JSON uses the same sentence without the `estimate:` prefix.
 
 Worked example (the quick start above): 1 RUM at 1 per RUM-hour for 730 hours is 730.00. At 0.5 per RUM-hour that is 365.00. With `--hours-per-month 720` the same prices are 720.00 and 360.00.
@@ -253,12 +253,12 @@ The billing page shows the count afterwards. rum-meter reads a file you already 
 
 - The official bill is the hourly peak: the maximum number of simultaneous managed resources per billing hour, summed across the HCP Terraform organizations under one HCP organization. That peak cannot be measured offline. rum-meter counts one snapshot per file and calls the result an estimate.
 - The definition counts a resource when it is in an HCP Terraform-managed state and has had at least one plan or apply. rum-meter does not see that history and includes every instance in the given file.
-- Only state format v4 (Terraform 0.12 and newer) is read. Remote state and plan files stay outside the tool. Count several workspaces by passing several files. The sum is not per hour and not per organization.
+- Only state format v4 (Terraform 0.12 and newer) is read, and the root value has to be a JSON object. A JSON array is exit 2, `state is not an object`. Remote state and plan files stay outside the tool. Count several workspaces by passing several files. The sum is not per hour and not per organization. An address that also occurs in another of those files is exit 2, `duplicate address`, and is not counted twice.
 - One workspace is one state. Flex, contracts and other discounts are included only when they are in the price file. rum-meter does not check those numbers. Old free-tier rules and Terraform Enterprise licenses have no model of their own.
 - "Each partial hour is billed as a full hour". Rounding per hour is not modeled.
 - "HCP Terraform combines workspace and Stacks resources under management when calculating costs". Stacks state is not supported.
 - The free plan with at most 500 managed resources is a limit, not a price.
-- A state should contain each address once. If an address appears twice, at the root, in a module, with count or for_each, or as a deposed object, rum-meter does not count that state: exit 2, with the address and the reason, without attribute values. On `diff`, added and removed therefore still add up to the RUM delta.
+- A state should contain each address once. If an address appears twice, at the root, in a module, with count or for_each, or as a deposed object, rum-meter does not count that state: exit 2, with the address and the reason, without attribute values. The same rule applies when `count` is given several files: the file that repeats an address is exit 2, and the totals are not printed. On `diff`, added and removed therefore still add up to the RUM delta.
 - rum-meter reads UTF-8, for state files and price files. A UTF-8 BOM at the start of the file is skipped. A UTF-16 or UTF-32 file, with or without a BOM, such as Windows PowerShell 5.1 writes on a redirect, is not converted. That is exit 2, with the message that the file is UTF-16 (or UTF-32) and must be saved as UTF-8, for example with `iconv -f UTF-16 -t UTF-8` or in PowerShell with `Out-File -Encoding utf8`. CRLF line ends are fine.
 - A file name that is not valid UTF-8 (possible on Linux) is read, but shown in the report with U+FFFD for the invalid bytes.
 - rum-meter reads only regular files, so not a pipe or process substitution. A directory, a FIFO or a device is refused with exit 2 before any byte is read.

@@ -107,8 +107,10 @@ pub fn cost_deltas(
         .tiers
         .iter()
         .map(|tier| {
-            let old_cents = cost::monthly_cents(old_rum, tier.price_per_rum_hour, hours_per_month)?;
-            let new_cents = cost::monthly_cents(new_rum, tier.price_per_rum_hour, hours_per_month)?;
+            let old_cents =
+                cost::monthly_cents(old_rum, &tier.price_per_rum_hour, hours_per_month)?;
+            let new_cents =
+                cost::monthly_cents(new_rum, &tier.price_per_rum_hour, hours_per_month)?;
             Ok(CostDelta {
                 name: tier.name.clone(),
                 currency: prices.currency.clone(),
@@ -142,7 +144,9 @@ mod tests {
     use crate::cost::{PriceList, TierPrice};
     use crate::rum::{Rule, classify};
     use crate::state::{IndexKey, Instance, Resource, State, load_state};
+    use bigdecimal::BigDecimal;
     use std::path::PathBuf;
+    use std::str::FromStr;
 
     fn verdict(address: &str, rule: Rule) -> Verdict {
         Verdict {
@@ -157,14 +161,14 @@ mod tests {
         }
     }
 
-    fn prices(tiers: &[(&str, f64)]) -> PriceList {
+    fn prices(tiers: &[(&str, &str)]) -> PriceList {
         PriceList {
             currency: "EUR".to_string(),
             tiers: tiers
                 .iter()
                 .map(|(name, price)| TierPrice {
                     name: (*name).to_string(),
-                    price_per_rum_hour: *price,
+                    price_per_rum_hour: BigDecimal::from_str(price).expect("price"),
                 })
                 .collect(),
         }
@@ -338,7 +342,7 @@ mod tests {
 
     #[test]
     fn cost_delta_subtracts_the_rounded_monthly_amounts() {
-        let list = prices(&[("alpha", 1.25), ("beta", 0.5)]);
+        let list = prices(&[("alpha", "1.25"), ("beta", "0.5")]);
         assert_eq!(
             amounts(&cost_deltas(6, 4, &list, 730).expect("cost fits")),
             vec![("alpha", "-1825.00"), ("beta", "-730.00")]
@@ -352,7 +356,7 @@ mod tests {
             vec![("alpha", "0.00"), ("beta", "0.00")]
         );
         // 1 × 0.0625 → 0.06 and 2 × 0.0625 → 0.13, so the bill moves by +0.07.
-        let awkward = prices(&[("half", 0.0625)]);
+        let awkward = prices(&[("half", "0.0625")]);
         assert_eq!(
             amounts(&cost_deltas(1, 2, &awkward, 1).expect("cost fits")),
             vec![("half", "+0.07")]
