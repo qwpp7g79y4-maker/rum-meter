@@ -2,6 +2,32 @@
 
 Deze pagina laat zien hoe elke release van rum-meter is gecontroleerd voordat hij online kwam, wat we vonden en wat we hebben opgelost. Het beschrijft onze controles. Het is geen garantie dat de software foutloos of veilig is.
 
+## v0.1.1
+
+| | |
+|---|---|
+| Versie | 0.1.1 ([release](https://github.com/qwpp7g79y4-maker/rum-meter/releases/tag/v0.1.1), [crates.io](https://crates.io/crates/rum-meter/0.1.1)) |
+| Gecontroleerde commit | [`b954f25`](https://github.com/qwpp7g79y4-maker/rum-meter/commit/b954f25) |
+| Datum | 2026-10-14 |
+| Tests | 169 automatische tests, gedraaid in debug- en releasemodus |
+
+### Hoe we controleerden
+
+- Dezelfde controles als bij de vorige versie (hieronder), op elk platform.
+- Een tweede externe geautomatiseerde codereview. Elke bevinding die we konden reproduceren is in deze versie opgelost, elk met een regressietest met precies die invoer.
+- Geautomatiseerde tests in CI: [run 38539439585](https://github.com/qwpp7g79y4-maker/rum-meter/actions/runs/38539439585) op Linux, Windows, macOS op Apple Silicon en Intel, en Rust 1.85, plus `cargo audit` (geen bekende kwetsbaarheden).
+
+### Wat we vonden en oplosten
+
+| Probleem | Oplossing |
+|---|---|
+| Een prijs kon via binaire drijvende komma worden afgerond (één cent verschil) | Prijzen worden als exacte decimalen gelezen |
+| Een statebestand met een JSON-array als wortel werd geaccepteerd | Het wordt geweigerd met exit 2 |
+| Hetzelfde adres in meerdere invoerbestanden werd dubbel geteld | Het wordt geweigerd |
+| Een pad dat door een FIFO werd vervangen kon de tool laten wachten; een volle schijf op stdout of stderr gaf een panic | Het geopende bestand wordt gecontroleerd; schrijffouten zijn nette fouten en geven nooit exit 0 |
+
+Alle fixes staan in de [changelog](https://github.com/qwpp7g79y4-maker/rum-meter/blob/main/CHANGELOG.md).
+
 ## v0.1.0
 
 | | |

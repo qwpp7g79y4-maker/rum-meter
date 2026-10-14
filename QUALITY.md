@@ -2,6 +2,32 @@
 
 This page shows how each release of rum-meter was checked before it was published, what we found, and what we fixed. It describes checks we did. It is not a guarantee that the software is free of bugs or secure.
 
+## v0.1.1
+
+| | |
+|---|---|
+| Version | 0.1.1 ([release](https://github.com/qwpp7g79y4-maker/rum-meter/releases/tag/v0.1.1), [crates.io](https://crates.io/crates/rum-meter/0.1.1)) |
+| Commit checked | [`b954f25`](https://github.com/qwpp7g79y4-maker/rum-meter/commit/b954f25) |
+| Date | 2026-10-14 |
+| Tests | 169 automated tests, run in debug and release mode |
+
+### How we checked
+
+- The same checks as for the previous version (below), on every platform.
+- A second external automated code review. Every finding we could reproduce is fixed in this version, each with a regression test that uses the exact input.
+- Automated tests in CI: [run 38539439585](https://github.com/qwpp7g79y4-maker/rum-meter/actions/runs/38539439585) on Linux, Windows, macOS on Apple Silicon and Intel, and Rust 1.85, plus `cargo audit` (no known vulnerabilities).
+
+### What we found and fixed
+
+| Problem | Fix |
+|---|---|
+| A price could be rounded through binary floating point (off by one cent) | Prices are read as exact decimals |
+| A state file whose root is a JSON array was accepted | It is refused with exit 2 |
+| The same address given twice across input files was counted twice | It is refused |
+| A path swapped for a FIFO could make the tool wait; a full disk on stdout or stderr caused a panic | The opened file is checked; write errors are clean errors and never exit 0 |
+
+All fixes are listed in the [changelog](https://github.com/qwpp7g79y4-maker/rum-meter/blob/main/CHANGELOG.md).
+
 ## v0.1.0
 
 | | |
