@@ -4,11 +4,15 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-14
+
 ### Fixed
 
 - A price is read as the exact decimal from the file. 1 RUM at 0.004999999999999999999 for 1 hour is 0.00. 1 RUM at 1.005 for 1 hour stays 1.01.
 - A state whose root value is a JSON array is refused with exit 2, `state is not an object`.
 - `count` refuses a repeated address across the files it is given, including the same file twice.
+- A path that is swapped for a FIFO between the check and the read no longer makes the tool wait; the opened file itself is checked.
+- A write error on stdout or stderr is a clean error instead of a panic. `--version` does not exit 0 when its output cannot be written.
 
 ## [0.1.0] - 2026-10-11
 
