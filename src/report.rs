@@ -2,8 +2,10 @@
 //!
 //! Only verdicts that count are included. Rows are ordered by count descending,
 //! then by name ascending. `top` keeps that many rows per list and merges the
-//! rest into one final `other` row. Without `top`, or when nothing is left
-//! over, there is no `other` row. An absent or empty module is `(root)`.
+//! rest into one final remainder row named `other`. When a real module or type
+//! is already named `other`, the remainder is `(other)` (then `(other 2)`, …)
+//! so every name in the list stays unique. Without `top`, or when nothing is
+//! left over, there is no remainder row. An absent or empty module is `(root)`.
 
 use std::collections::BTreeMap;
 
@@ -78,10 +80,29 @@ fn ranked(counts: BTreeMap<String, usize>, top: Option<u64>) -> Vec<Row> {
     let rest = rows[top..].iter().map(|row| row.count).sum();
     rows.truncate(top);
     rows.push(Row {
-        name: OTHER.to_string(),
+        name: remainder_label(&rows),
         count: rest,
     });
     rows
+}
+
+/// Name for the merged remainder. Prefer `other`; when that name is already a
+/// real row (EC1: same label twice would be ambiguous), use `(other)`, then
+/// `(other 2)`, and so on.
+fn remainder_label(kept: &[Row]) -> String {
+    if !kept.iter().any(|row| row.name == OTHER) {
+        return OTHER.to_string();
+    }
+    let mut label = String::from("(other)");
+    let mut n = 2u32;
+    while kept.iter().any(|row| row.name == label) {
+        label = format!("(other {n})");
+        n = n.saturating_add(1);
+        if n == 0 {
+            break;
+        }
+    }
+    label
 }
 
 #[cfg(test)]
@@ -173,5 +194,63 @@ mod tests {
         );
         assert!(breakdown(&[] as &[Verdict], Some(0)).modules.is_empty());
         assert!(breakdown(&[] as &[Verdict], None).types.is_empty());
+    }
+
+    #[test]
+    fn real_other_name_does_not_collide_with_remainder() {
+        // Reported: module "other" with 5, module "zzz" with 1, --top 1 →
+        // two rows both named "other". Remainder must become "(other)".
+        let mut verdicts = Vec::new();
+        for _ in 0..5 {
+            verdicts.push(counting(Some("other"), "random_id"));
+        }
+        verdicts.push(counting(Some("zzz"), "random_id"));
+        let top = breakdown(&verdicts, Some(1));
+        assert_eq!(
+            top.modules,
+            vec![row("other", 5), row("(other)", 1)],
+            "module list must keep unique names"
+        );
+        let names: Vec<_> = top.modules.iter().map(|r| r.name.as_str()).collect();
+        let mut sorted = names.clone();
+        sorted.sort();
+        sorted.dedup();
+        assert_eq!(
+            names.len(),
+            sorted.len(),
+            "duplicate module names: {names:?}"
+        );
+
+        // Same for a type literally named "other".
+        let mut types = Vec::new();
+        for _ in 0..5 {
+            types.push(counting(None, "other"));
+        }
+        types.push(counting(None, "zzz"));
+        let top = breakdown(&types, Some(1));
+        assert_eq!(top.types, vec![row("other", 5), row("(other)", 1)]);
+        let names: Vec<_> = top.types.iter().map(|r| r.name.as_str()).collect();
+        let mut sorted = names.clone();
+        sorted.sort();
+        sorted.dedup();
+        assert_eq!(names.len(), sorted.len(), "duplicate type names: {names:?}");
+    }
+
+    #[test]
+    fn remainder_skips_other_and_paren_other_when_both_are_real() {
+        let verdicts = vec![
+            counting(Some("other"), "random_id"),
+            counting(Some("other"), "random_id"),
+            counting(Some("(other)"), "random_id"),
+            counting(Some("zzz"), "random_id"),
+        ];
+        let top = breakdown(&verdicts, Some(2));
+        // top two by count: "other" (2), then "(other)" and "zzz" tied at 1 —
+        // alphabetical: "(other)" before "zzz", so kept = other, (other);
+        // remainder is zzz → needs "(other 2)".
+        assert_eq!(
+            top.modules,
+            vec![row("other", 2), row("(other)", 1), row("(other 2)", 1)]
+        );
     }
 }

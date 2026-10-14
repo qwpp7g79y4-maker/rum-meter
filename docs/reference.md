@@ -14,7 +14,7 @@ A flag that would not change the report is exit 3, with one fixed line on stderr
 | --- | --- | --- |
 | `--json` | count and diff | Print one JSON object instead of text. `schema_version` is 1. |
 | `--explain` | count; on diff only together with `--json` | One line per instance: the address, `counts` or `does not count`, and the rule code. A tainted object appends ` tainted`. |
-| `--top` | count; on diff only together with `--json` | Keep at most N module rows and N type rows. The rest is one row `other`. |
+| `--top` | count; on diff only together with `--json` | Keep at most N module rows and N type rows. The rest is one row `other`, or `(other)` when that name is already taken. |
 | `--prices` | count and diff | Read tier prices from this JSON file. Without it there is no cost line. |
 | `--hours-per-month` | count and diff, only together with `--prices` | Hours in the month used for the estimate. Default 730. |
 | `--max-rum` | count | Exit 1 when the summed RUM is above N. N itself is within the limit. The report is still printed. |
@@ -43,7 +43,7 @@ Prices come only from a JSON file you pass with `--prices`. The program has no b
 }
 ```
 
-`currency` is a non-empty string. `tiers` is a non-empty array of objects. Each object has a non-empty `name` and a `price_per_rum_hour` that is a finite number, zero or greater. `0` is a valid price. Any other field, including `note`, is ignored and is not printed. The note in the example is Dutch. The file is an example, not a HashiCorp rate.
+`currency` is a non-empty string. `tiers` is a non-empty array of objects. Each object has a non-empty `name` and a `price_per_rum_hour` that is a finite number, zero or greater. A repeated key in a tier is `duplicate key in a tier` (exit 2). `0` is a valid price. Any other field, including `note`, is ignored and is not printed. The note in the example is Dutch. The file is an example, not a HashiCorp rate.
 
 A comma is not a decimal separator (`0.5`, not `0,5`). An unquoted `0,5` is invalid JSON. A quoted `"0,5"` is `price is not a number`.
 
@@ -53,6 +53,7 @@ Other price-file failures, each one line on stderr and nothing on stdout:
 - missing or empty currency: `currency is empty`
 - missing `tiers`, a `tiers` value that is not an array, or an empty array: `price file has no tiers`
 - a tier that is not an object: `tier is not an object`
+- a repeated key in a tier: `duplicate key in a tier`
 - an empty tier name: `tier name is empty`
 - a price that is missing, not a number, or not finite: `price is not a number`
 - a negative price: `price is negative`
@@ -78,7 +79,7 @@ The file must be UTF-8; the same holds for a price file. A leading UTF-8 BOM (th
 
 Only a regular file is read, for a state and for a price file. The file is opened without waiting, and the type is taken from that opened file, before any byte of it is read. A directory, a FIFO, a device, or a symlink to one of those is `not a regular file`. A path that becomes a FIFO is not read and does not hang. A symlink to a regular file is read. That is why a pipe or process substitution does not work. A missing path is `unreadable (not found)`. The other unreadable kinds are `permission denied`, `is a directory` and `io error`.
 
-Each address may occur once, in one file and across the files passed to `count`. A repeat, at the root, in a module, with count or for_each, as a deposed object, or in a later file, is exit 2: `duplicate address`, plus the address. Control characters in that address are written as `\u00XX`. Attribute values are not included. The first repeat in verdict order is the one reported. On `diff`, added and removed therefore still add up to the RUM delta. Text output escapes control characters the same way. JSON keeps the characters and lets the JSON encoder escape them.
+Each address may occur once, in one file and across the files passed to `count`. A repeat, at the root, in a module, with count or for_each, as a deposed object, or in a later file, is exit 2: `duplicate address`, plus the address. Control characters, and invisible or bidirectional format characters such as U+200B and U+202E, in that address are written as `\uXXXX`. Attribute values are not included. The first repeat in verdict order is the one reported. On `diff`, added and removed therefore still add up to the RUM delta. Text output escapes control characters the same way. JSON keeps the characters and lets the JSON encoder escape them.
 
 ## How it counts
 
@@ -104,7 +105,7 @@ With `count` and `for_each`, each instance is its own row. The address is `modul
 
 Terraform writes `index_key`, `status` (only `tainted`) and `deposed` per object in state v4 (`internal/states/statefile/version4.go`, commit b6daf8bc, lines 705-707). Assumption, because it is not a separate sentence on the pricing page: a deposed object counts as its own infrastructure object. That reading is not verified as a HashiCorp billing rule. It follows the sentence about every infrastructure object.
 
-The line `not counted: R2 n, R3 n, R4 n` is printed for the file and again for the total, including when a count is 0. Only R1 rows enter `modules` and `types`. The same module path or type from several files is added up. An absent or empty module is `(root)`. Rows are ordered by count descending, then by name ascending. `--top N` keeps the first N rows of each list. The rest is one final row `other`. `--top 0` leaves only `other` when anything counted. Without `--top`, or when nothing remains, there is no `other` row.
+The line `not counted: R2 n, R3 n, R4 n` is printed for the file and again for the total, including when a count is 0. Only R1 rows enter `modules` and `types`. The same module path or type from several files is added up. An absent or empty module is `(root)`. Rows are ordered by count descending, then by name ascending. `--top N` keeps the first N rows of each list. The rest is one final row `other`. When a real module or type is already named `other`, that remainder is `(other)` (then `(other 2)`, and so on) so every name stays unique. `--top 0` leaves only `other` when anything counted. Without `--top`, or when nothing remains, there is no remainder row.
 
 `diff` compares addresses. Added lines are counting addresses in the new state that the old state does not have. Removed lines are counting addresses in the old state that the new state does not have. A changed rule is the same address with a different rule code, whether or not the instance counts. Those three lists are in address order. `rum delta` is new RUM minus old RUM, with a `+` when the number is positive. The text report does not repeat the module list. In JSON, `by_module` and `by_type` describe the new state.
 

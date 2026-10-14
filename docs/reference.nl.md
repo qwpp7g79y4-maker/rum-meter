@@ -16,7 +16,7 @@ Een vlag die het rapport niet zou veranderen is exit 3, met één vaste regel op
 | --- | --- | --- |
 | `--json` | count en diff | Eén JSON-object in plaats van tekst. `schema_version` is 1. |
 | `--explain` | count; bij diff alleen samen met `--json` | Eén regel per instantie: het adres, `counts` of `does not count`, en de regelcode. Een tainted object krijgt er ` tainted` bij. |
-| `--top` | count; bij diff alleen samen met `--json` | Hoogstens N modulerijen en N typerijen. De rest is één rij `other`. |
+| `--top` | count; bij diff alleen samen met `--json` | Hoogstens N modulerijen en N typerijen. De rest is één rij `other`, of `(other)` als die naam al bezet is. |
 | `--prices` | count en diff | Lees tierprijzen uit dit JSON-bestand. Zonder dit bestand is er geen kostenregel. |
 | `--hours-per-month` | count en diff, alleen samen met `--prices` | Uren in de maand voor de schatting. Standaard 730. |
 | `--max-rum` | count | Exit 1 als de opgetelde RUM boven N ligt. N zelf valt binnen de grens. Het rapport wordt toch afgedrukt. |
@@ -45,7 +45,7 @@ Prijzen komen alleen uit een JSON-bestand dat je met `--prices` meegeeft. Het pr
 }
 ```
 
-`currency` is een niet-lege tekst. `tiers` is een niet-lege lijst van objecten. Elk object heeft een niet-lege `name` en een `price_per_rum_hour` die een eindig getal is, nul of hoger. `0` is een geldige prijs. Elk ander veld, ook `note`, wordt genegeerd en niet afgedrukt. De note in het voorbeeld is Nederlands. Het bestand is een voorbeeld en geen tarief van HashiCorp.
+`currency` is een niet-lege tekst. `tiers` is een niet-lege lijst van objecten. Elk object heeft een niet-lege `name` en een `price_per_rum_hour` die een eindig getal is, nul of hoger. Een herhaalde sleutel in een tier is `duplicate key in a tier` (exit 2). `0` is een geldige prijs. Elk ander veld, ook `note`, wordt genegeerd en niet afgedrukt. De note in het voorbeeld is Nederlands. Het bestand is een voorbeeld en geen tarief van HashiCorp.
 
 Een komma is geen decimaalteken (`0.5`, not `0,5`). Een `0,5` zonder aanhalingstekens is ongeldige JSON. Een `"0,5"` tussen aanhalingstekens is `price is not a number`.
 
@@ -55,6 +55,7 @@ Andere fouten in het prijsbestand, elk één regel op stderr en niets op stdout:
 - valuta ontbreekt of is leeg: `currency is empty`
 - `tiers` ontbreekt, is geen lijst, of is een lege lijst: `price file has no tiers`
 - een tier die geen object is: `tier is not an object`
+- een herhaalde sleutel in een tier: `duplicate key in a tier`
 - een lege tiernaam: `tier name is empty`
 - een prijs die ontbreekt, geen getal is, of niet eindig is: `price is not a number`
 - een negatieve prijs: `price is negative`
@@ -80,7 +81,7 @@ Het bestand moet UTF-8 zijn; dat geldt ook voor een prijsbestand. Een UTF-8 BOM 
 
 Alleen een gewoon bestand wordt gelezen, voor een state en voor een prijsbestand. Het bestand wordt geopend zonder te wachten, en het type komt van dat geopende bestand, vóór er een byte van wordt gelezen. Een map, een FIFO, een apparaat of een symlink daarnaartoe is `not a regular file`. Een pad dat een FIFO wordt, wordt niet gelezen en blijft niet hangen. Een symlink naar een gewoon bestand wordt wel gelezen. Daarom werken een pipe en process substitution niet. Een ontbrekend pad is `unreadable (not found)`. De andere onleesbare soorten zijn `permission denied`, `is a directory` en `io error`.
 
-Elk adres mag één keer voorkomen, in één bestand en over de bestanden die aan `count` worden meegegeven. Een herhaling, op root, in een module, met count of for_each, als deposed object, of in een later bestand, is exit 2: `duplicate address`, plus het adres. Stuurtekens in dat adres worden geschreven als `\u00XX`. Attribuutwaarden zitten er niet bij. De eerste herhaling in de volgorde van de beslissingen wordt gemeld. Bij `diff` blijven added en removed daardoor optellen tot de RUM-delta. Tekstuitvoer escapt stuurtekens op dezelfde manier. JSON houdt de tekens en laat de JSON-encoder ze escapen.
+Elk adres mag één keer voorkomen, in één bestand en over de bestanden die aan `count` worden meegegeven. Een herhaling, op root, in een module, met count of for_each, als deposed object, of in een later bestand, is exit 2: `duplicate address`, plus het adres. Stuurtekens, en onzichtbare of tekstrichting-wijzigende opmaaktekens zoals U+200B en U+202E, in dat adres worden geschreven als `\uXXXX`. Attribuutwaarden zitten er niet bij. De eerste herhaling in de volgorde van de beslissingen wordt gemeld. Bij `diff` blijven added en removed daardoor optellen tot de RUM-delta. Tekstuitvoer escapt stuurtekens op dezelfde manier. JSON houdt de tekens en laat de JSON-encoder ze escapen.
 
 ## Hoe het rekent
 
@@ -106,7 +107,7 @@ Bij `count` en `for_each` is elke instantie een eigen rij. Het adres is `module.
 
 Terraform schrijft per object in state v4 `index_key`, `status` (alleen `tainted`) en `deposed` (`internal/states/statefile/version4.go`, commit b6daf8bc, regels 705-707). Aanname, omdat het geen aparte zin op de pricingpagina is: een deposed object telt als een eigen infrastructuurobject. Die lezing is niet geverifieerd als billingregel van HashiCorp. Ze volgt de zin over elk infrastructuurobject.
 
-De regel `not counted: R2 n, R3 n, R4 n` wordt voor het bestand afgedrukt en nog eens voor het totaal, ook als een aantal 0 is. Alleen R1-rijen komen in `modules` en `types`. Hetzelfde modulepad of type uit meerdere bestanden wordt opgeteld. Een ontbrekende of lege module is `(root)`. Rijen staan op aantal aflopend, dan op naam oplopend. `--top N` houdt van elke lijst de eerste N rijen. De rest is één laatste rij `other`. `--top 0` laat alleen `other` over als er iets telde. Zonder `--top`, of als er niets overblijft, is er geen `other`-rij.
+De regel `not counted: R2 n, R3 n, R4 n` wordt voor het bestand afgedrukt en nog eens voor het totaal, ook als een aantal 0 is. Alleen R1-rijen komen in `modules` en `types`. Hetzelfde modulepad of type uit meerdere bestanden wordt opgeteld. Een ontbrekende of lege module is `(root)`. Rijen staan op aantal aflopend, dan op naam oplopend. `--top N` houdt van elke lijst de eerste N rijen. De rest is één laatste rij `other`. Als een echte module of type al `other` heet, wordt die rest `(other)` (daarna `(other 2)`, enzovoort) zodat elke naam uniek blijft. `--top 0` laat alleen `other` over als er iets telde. Zonder `--top`, of als er niets overblijft, is er geen rest-rij.
 
 `diff` vergelijkt adressen. Added zijn tellende adressen in de nieuwe state die de oude state niet heeft. Removed zijn tellende adressen in de oude state die de nieuwe state niet heeft. Een gewijzigde regel is hetzelfde adres met een andere regelcode, of de instantie nu telt of niet. Die drie lijsten staan op adresvolgorde. `rum delta` is nieuwe RUM min oude RUM, met een `+` als het getal positief is. Het tekstrapport herhaalt de modulelijst niet. In JSON beschrijven `by_module` en `by_type` de nieuwe state.
 

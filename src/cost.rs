@@ -140,6 +140,9 @@ pub enum PriceError {
     TierNotObject {
         path: PathBuf,
     },
+    DuplicateKey {
+        path: PathBuf,
+    },
     NegativePrice {
         path: PathBuf,
     },
@@ -163,6 +166,7 @@ enum ParseError {
     NoTiers,
     EmptyTierName,
     TierNotObject,
+    DuplicateKey,
     NegativePrice,
     NonNumericPrice,
     EmptyCurrency,
@@ -178,6 +182,7 @@ impl ParseError {
             Self::NoTiers => PriceError::NoTiers { path },
             Self::EmptyTierName => PriceError::EmptyTierName { path },
             Self::TierNotObject => PriceError::TierNotObject { path },
+            Self::DuplicateKey => PriceError::DuplicateKey { path },
             Self::NegativePrice => PriceError::NegativePrice { path },
             Self::NonNumericPrice => PriceError::NonNumericPrice { path },
             Self::EmptyCurrency => PriceError::EmptyCurrency { path },
@@ -238,6 +243,13 @@ impl fmt::Display for PriceError {
                 write!(
                     f,
                     "rum-meter: {}: tier is not an object",
+                    crate::rum::escape_controls(&path.display().to_string())
+                )
+            }
+            Self::DuplicateKey { path } => {
+                write!(
+                    f,
+                    "rum-meter: {}: duplicate key in a tier",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
@@ -353,9 +365,164 @@ fn raw_is_array(raw: &str) -> bool {
         == Some(b'[')
 }
 
+/// `true` when the tier JSON object repeats a top-level key (including the same
+/// key written again after whitespace or as a `\uXXXX` escape that decodes to
+/// an earlier key). Nested objects are ignored.
+fn tier_has_duplicate_key(text: &str) -> bool {
+    let Ok(value) = serde_json::from_str::<serde_json::Map<String, serde_json::Value>>(text) else {
+        return false;
+    };
+    match count_top_level_object_keys(text) {
+        Some(found) => found > value.len(),
+        None => false,
+    }
+}
+
+fn count_top_level_object_keys(text: &str) -> Option<usize> {
+    let text = text.strip_prefix('\u{feff}').unwrap_or(text);
+    let mut chars = text.chars().peekable();
+    skip_ws(&mut chars);
+    if chars.next() != Some('{') {
+        return None;
+    }
+    skip_ws(&mut chars);
+    if chars.peek() == Some(&'}') {
+        chars.next();
+        skip_ws(&mut chars);
+        return chars.next().is_none().then_some(0);
+    }
+    let mut count = 0usize;
+    loop {
+        skip_ws(&mut chars);
+        if !skip_json_string(&mut chars) {
+            return None;
+        }
+        count = count.saturating_add(1);
+        skip_ws(&mut chars);
+        if chars.next() != Some(':') {
+            return None;
+        }
+        if !skip_json_value(&mut chars) {
+            return None;
+        }
+        skip_ws(&mut chars);
+        match chars.next() {
+            Some(',') => {}
+            Some('}') => {
+                skip_ws(&mut chars);
+                return chars.next().is_none().then_some(count);
+            }
+            _ => return None,
+        }
+    }
+}
+
+fn skip_ws(chars: &mut std::iter::Peekable<std::str::Chars<'_>>) {
+    while matches!(chars.peek(), Some(' ' | '\t' | '\n' | '\r')) {
+        chars.next();
+    }
+}
+
+#[allow(clippy::collapsible_match)]
+fn skip_json_string(chars: &mut std::iter::Peekable<std::str::Chars<'_>>) -> bool {
+    if chars.next() != Some('"') {
+        return false;
+    }
+    while let Some(ch) = chars.next() {
+        match ch {
+            '"' => return true,
+            '\\' => {
+                if chars.next().is_none() {
+                    return false;
+                }
+            }
+            _ => {}
+        }
+    }
+    false
+}
+
+fn skip_json_value(chars: &mut std::iter::Peekable<std::str::Chars<'_>>) -> bool {
+    skip_ws(chars);
+    match chars.peek().copied() {
+        Some('"') => skip_json_string(chars),
+        Some('{') => skip_json_container(chars, '{', '}'),
+        Some('[') => skip_json_container(chars, '[', ']'),
+        Some('t') => skip_literal(chars, "true"),
+        Some('f') => skip_literal(chars, "false"),
+        Some('n') => skip_literal(chars, "null"),
+        Some('-') | Some('0'..='9') => {
+            chars.next();
+            while matches!(
+                chars.peek().copied(),
+                Some('0'..='9' | '.' | 'e' | 'E' | '+' | '-')
+            ) {
+                chars.next();
+            }
+            true
+        }
+        _ => false,
+    }
+}
+
+fn skip_literal(chars: &mut std::iter::Peekable<std::str::Chars<'_>>, literal: &str) -> bool {
+    for expected in literal.chars() {
+        if chars.next() != Some(expected) {
+            return false;
+        }
+    }
+    true
+}
+
+#[allow(clippy::collapsible_match)]
+fn skip_json_container(
+    chars: &mut std::iter::Peekable<std::str::Chars<'_>>,
+    open: char,
+    close: char,
+) -> bool {
+    if chars.next() != Some(open) {
+        return false;
+    }
+    let mut depth = 1usize;
+    while let Some(ch) = chars.next() {
+        match ch {
+            '"' => {
+                // Put the quote back into the stream logic: we already consumed it.
+                // Re-parse from after the quote by manually finishing the string.
+                loop {
+                    match chars.next() {
+                        Some('"') => break,
+                        Some('\\') => {
+                            if chars.next().is_none() {
+                                return false;
+                            }
+                        }
+                        Some(_) => {}
+                        None => return false,
+                    }
+                }
+            }
+            c if c == open => depth += 1,
+            c if c == close => {
+                depth -= 1;
+                if depth == 0 {
+                    return true;
+                }
+            }
+            _ => {}
+        }
+    }
+    false
+}
+
 fn parse_tier(raw: &RawValue) -> Result<TierPrice, ParseError> {
     if raw_is_array(raw.get()) {
         return Err(ParseError::TierNotObject);
+    }
+    // serde_json with borrowed RawValue fails on a repeated key; map that to a
+    // clear duplicate-key error instead of "tier is not an object".
+    if tier_has_duplicate_key(raw.get()) {
+        return Err(ParseError::DuplicateKey);
     }
     let fields: TierFields<'_> =
         serde_json::from_str(raw.get()).map_err(|_| ParseError::TierNotObject)?;
@@ -514,6 +681,62 @@ mod tests {
                 "{name}: {err}"
             );
             assert!(!err.to_string().contains("tier name is empty"));
+        }
+    }
+
+    #[test]
+    fn duplicate_key_in_a_tier_is_refused_with_a_clear_message() {
+        // Reported: repeated price_per_rum_hour → used to say "tier is not an object".
+        let cases = [
+            (
+                "dup-price.json",
+                r#"{"currency":"EUR","tiers":[{"name":"t","price_per_rum_hour":1,"price_per_rum_hour":999}]}"#,
+            ),
+            (
+                "dup-price-reversed.json",
+                r#"{"currency":"EUR","tiers":[{"price_per_rum_hour":1,"name":"t","price_per_rum_hour":999}]}"#,
+            ),
+            (
+                "dup-price-ws.json",
+                r#"{"currency":"EUR","tiers":[{ "name" : "t" , "price_per_rum_hour" : 1 , "price_per_rum_hour" : 999 }]}"#,
+            ),
+            (
+                "dup-price-lf.json",
+                "{\"currency\":\"EUR\",\"tiers\":[{\"name\":\"t\",\"price_per_rum_hour\":1,\n\"price_per_rum_hour\":999}]}",
+            ),
+            (
+                "dup-price-crlf.json",
+                "{\"currency\":\"EUR\",\"tiers\":[{\"name\":\"t\",\"price_per_rum_hour\":1,\r\n\"price_per_rum_hour\":999}]}",
+            ),
+            (
+                "dup-price-tab.json",
+                "{\"currency\":\"EUR\",\"tiers\":[{\"name\":\"t\",\"price_per_rum_hour\":1,\t\"price_per_rum_hour\":999}]}",
+            ),
+            (
+                "dup-price-uescape.json",
+                r#"{"currency":"EUR","tiers":[{"name":"t","price_per_rum_hour":1,"\u0070rice_per_rum_hour":999}]}"#,
+            ),
+            (
+                "dup-name.json",
+                r#"{"currency":"EUR","tiers":[{"name":"a","name":"b","price_per_rum_hour":1}]}"#,
+            ),
+        ];
+        for (name, body) in cases {
+            let err = load_body(name, body).unwrap_err();
+            assert!(
+                matches!(err, PriceError::DuplicateKey { .. }),
+                "{name}: {err}"
+            );
+            assert!(
+                err.to_string().ends_with("duplicate key in a tier"),
+                "{name}: {err}"
+            );
+            assert!(
+                !err.to_string().contains("tier is not an object"),
+                "{name}: still the old message: {err}"
+            );
+            assert!(!err.to_string().contains("999"));
+            assert!(!err.to_string().contains("CANARY"));
         }
     }
 
