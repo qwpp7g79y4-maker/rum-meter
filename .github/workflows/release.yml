@@ -42,7 +42,7 @@ jobs:
     env:
       MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macos_min }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
@@ -99,7 +99,7 @@ jobs:
           test -f docs/reference.md
           test -f docs/reference.nl.md
           test -f SECURITY.md
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.target }}
           path: dist/*
@@ -111,8 +111,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
