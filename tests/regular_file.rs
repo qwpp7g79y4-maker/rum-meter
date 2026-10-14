@@ -405,12 +405,10 @@ mod trace {
             i64::from(options),
             0,
         );
-        if rc == 0 {
-            Ok(None)
-        } else if rc < 0 {
-            Err(std::io::Error::from_raw_os_error(errno_code(rc)))
-        } else {
-            Ok(Some(status))
+        match rc.cmp(&0) {
+            std::cmp::Ordering::Equal => Ok(None),
+            std::cmp::Ordering::Less => Err(std::io::Error::from_raw_os_error(errno_code(rc))),
+            std::cmp::Ordering::Greater => Ok(Some(status)),
         }
     }
 

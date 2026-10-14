@@ -8,7 +8,7 @@
 //! open cannot block: the open returns, and the descriptor is not a regular
 //! file.
 
-use std::fs::{self, File, OpenOptions};
+use std::fs::{self, File};
 use std::io::{self, ErrorKind, Read};
 use std::path::Path;
 
@@ -33,6 +33,7 @@ pub(crate) fn read_regular(path: &Path) -> Result<Vec<u8>, RegularError> {
 /// regular file. The type is not looked up by path a second time.
 #[cfg(unix)]
 fn open_regular(path: &Path) -> Result<File, RegularError> {
+    use std::fs::OpenOptions;
     use std::os::unix::fs::OpenOptionsExt;
 
     match OpenOptions::new()
