@@ -7,15 +7,16 @@ Deze pagina laat zien hoe elke release van rum-meter is gecontroleerd voordat hi
 | | |
 |---|---|
 | Versie | 0.1.1 ([release](https://github.com/qwpp7g79y4-maker/rum-meter/releases/tag/v0.1.1), [crates.io](https://crates.io/crates/rum-meter/0.1.1)) |
-| Gecontroleerde commit | [`b954f25`](https://github.com/qwpp7g79y4-maker/rum-meter/commit/b954f25) |
-| Datum | 2026-10-14 |
-| Tests | 169 automatische tests, gedraaid in debug- en releasemodus |
+| Gecontroleerde commit | [`d6f3fe2`](https://github.com/qwpp7g79y4-maker/rum-meter/commit/d6f3fe2) |
+| Datum | 2026-10-15 |
+| Tests | 176 automatische tests, gedraaid in debug- en releasemodus |
 
 ### Hoe we controleerden
 
 - Dezelfde controles als bij de vorige versie (hieronder), op elk platform.
 - Een tweede externe geautomatiseerde codereview. Elke bevinding die we konden reproduceren is in deze versie opgelost, elk met een regressietest met precies die invoer.
-- Geautomatiseerde tests in CI: [run 38539439585](https://github.com/qwpp7g79y4-maker/rum-meter/actions/runs/38539439585) op Linux, Windows, macOS op Apple Silicon en Intel, en Rust 1.85, plus `cargo audit` (geen bekende kwetsbaarheden).
+- Geautomatiseerde tests in CI: [run 38654547261](https://github.com/qwpp7g79y4-maker/rum-meter/actions/runs/38654547261) op Linux, Windows, macOS op Apple Silicon en Intel, en Rust 1.85, plus `cargo audit` (geen bekende kwetsbaarheden).
+- Een verse onafhankelijke eindreview op deze commit tegen een vaste edge-case-checklist (elk punt met een concrete kwade invoer). Die eindigde op DONE; geen blokkerende bevindingen.
 
 ### Wat we vonden en oplosten
 
@@ -25,6 +26,8 @@ Deze pagina laat zien hoe elke release van rum-meter is gecontroleerd voordat hi
 | Een statebestand met een JSON-array als wortel werd geaccepteerd | Het wordt geweigerd met exit 2 |
 | Hetzelfde adres in meerdere invoerbestanden werd dubbel geteld | Het wordt geweigerd |
 | Een pad dat door een FIFO werd vervangen kon de tool laten wachten; een volle schijf op stdout of stderr gaf een panic | Het geopende bestand wordt gecontroleerd; schrijffouten zijn nette fouten en geven nooit exit 0 |
+| `--top` gaf twee niet te onderscheiden `other`-rijen als een echte module of type `other` heette | De rest is `(other)` (daarna `(other 2)`, enzovoort) zodat elke naam uniek blijft |
+| Een herhaalde sleutel in een prijstier werd gemeld als `tier is not an object` | Het is `duplicate key in a tier` (exit 2) |
 
 Alle fixes staan in de [changelog](https://github.com/qwpp7g79y4-maker/rum-meter/blob/main/CHANGELOG.md).
 

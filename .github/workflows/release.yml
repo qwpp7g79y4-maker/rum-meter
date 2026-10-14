@@ -61,7 +61,7 @@ jobs:
           mkdir -p "dist/$name/tests"
           # Everything the README links to with a relative link, so the links
           # and the quick start examples work inside the archive.
-          cp README.md README.nl.md LICENSE-MIT LICENSE-APACHE CHANGELOG.md CONTRIBUTING.md SECURITY.md "dist/$name/"
+          cp README.md README.nl.md LICENSE-MIT LICENSE-APACHE CHANGELOG.md CONTRIBUTING.md SECURITY.md QUALITY.md QUALITY.nl.md "dist/$name/"
           cp -R docs "dist/$name/"
           cp -R tests/fixtures "dist/$name/tests/"
           cd dist
@@ -99,6 +99,10 @@ jobs:
           test -f docs/reference.md
           test -f docs/reference.nl.md
           test -f SECURITY.md
+          test -f QUALITY.md
+          test -f QUALITY.nl.md
+          test -f CHANGELOG.md
+          test -f CONTRIBUTING.md
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.target }}
