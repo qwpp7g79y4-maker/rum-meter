@@ -4,6 +4,10 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- `diff` matches objects on module, mode, type, name, index key and deposed key, not on the printed address. A resource named `a[0]` and resource `a` at index 0 are now one removal and one addition instead of no change.
+
 ## [0.1.1] - 2026-10-14
 
 ### Fixed

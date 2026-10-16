@@ -191,7 +191,7 @@ costs:
 estimate: HCP Terraform bills the hourly peak; this is a single snapshot
 ```
 
-`diff` vergelijkt twee states: toegevoegde en verwijderde tellende adressen, instanties die van regel wisselen, en het RUM-verschil. Met `--prices` staat er ook het maandelijkse kostenverschil per tier.
+`diff` vergelijkt twee states: toegevoegde en verwijderde tellende adressen, instanties die van regel wisselen, en het RUM-verschil. Met `--prices` staat er ook het maandelijkse kostenverschil per tier. Twee objecten zijn alleen dezelfde als module, mode, type, naam, indexsleutel en deposed-sleutel allemaal gelijk zijn, dus een resource met de naam `a[0]` en resource `a` op index 0 zijn één verwijdering en één toevoeging, ook al tonen ze allebei als `random_id.a[0]`.
 
 ```console
 $ rum-meter diff tests/fixtures/v4_diff_old.json tests/fixtures/v4_diff_new.json

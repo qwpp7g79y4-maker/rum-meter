@@ -120,6 +120,7 @@ mod tests {
     fn counting(module: Option<&str>, resource_type: &str) -> Verdict {
         Verdict {
             address: String::new(),
+            identity: String::new(),
             resource_type: resource_type.to_string(),
             module: module.map(str::to_string),
             counts: true,

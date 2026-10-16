@@ -63,12 +63,11 @@ pub fn diff_verdicts(old: &[Verdict], new: &[Verdict]) -> StateDiff {
     let mut added = Vec::new();
     let mut changed_rule = Vec::new();
     for (address, new_verdict) in &new_by_address {
-        let address = *address;
-        match old_by_address.get(address) {
-            None if new_verdict.counts => added.push(address.to_string()),
+        match old_by_address.get(*address) {
+            None if new_verdict.counts => added.push(new_verdict.address.clone()),
             Some(old_verdict) if old_verdict.rule != new_verdict.rule => {
                 changed_rule.push(RuleChange {
-                    address: address.to_string(),
+                    address: new_verdict.address.clone(),
                     old_rule: old_verdict.rule,
                     new_rule: new_verdict.rule,
                 });
@@ -79,12 +78,15 @@ pub fn diff_verdicts(old: &[Verdict], new: &[Verdict]) -> StateDiff {
 
     let mut removed = Vec::new();
     for (address, old_verdict) in &old_by_address {
-        let address = *address;
-        if old_verdict.counts && !new_by_address.contains_key(address) {
-            removed.push(address.to_string());
+        if old_verdict.counts && !new_by_address.contains_key(*address) {
+            removed.push(old_verdict.address.clone());
         }
     }
 
+    // Sorted by printed address, as before: the map key is the identity.
+    added.sort();
+    removed.sort();
+    changed_rule.sort_by(|a, b| a.address.cmp(&b.address));
     StateDiff {
         added,
         removed,
@@ -123,7 +125,7 @@ pub fn cost_deltas(
 fn by_address(verdicts: &[Verdict]) -> BTreeMap<&str, &Verdict> {
     let mut map = BTreeMap::new();
     for verdict in verdicts {
-        map.entry(verdict.address.as_str()).or_insert(verdict);
+        map.entry(verdict.identity.as_str()).or_insert(verdict);
     }
     map
 }
@@ -151,6 +153,7 @@ mod tests {
     fn verdict(address: &str, rule: Rule) -> Verdict {
         Verdict {
             address: address.to_string(),
+            identity: address.to_string(),
             resource_type: "random_id".to_string(),
             module: None,
             counts: rule == Rule::R1,

@@ -62,6 +62,11 @@ impl fmt::Display for Rule {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Verdict {
     pub address: String,
+    /// Exact identity of the state object: module, mode, type, name, index
+    /// key and deposed key, each kept apart. Two objects can print the same
+    /// `address` (a resource named `a[0]` and resource `a` at index 0), so
+    /// `diff` matches on this, never on the printed address.
+    pub identity: String,
     pub resource_type: String,
     pub module: Option<String>,
     pub counts: bool,
@@ -180,7 +185,24 @@ fn verdict(resource: &Resource, instance: Option<&Instance>, rule: Rule) -> Verd
     let index = instance.and_then(|instance| instance.index_key.as_ref());
     let deposed = instance.and_then(|instance| instance.deposed.clone());
     let tainted = instance.is_some_and(|instance| instance.tainted);
+    let identity = serde_json::json!([
+        resource
+            .module
+            .as_deref()
+            .filter(|module| !module.is_empty()),
+        resource.mode,
+        resource.resource_type,
+        resource.name,
+        match index {
+            None => serde_json::Value::Null,
+            Some(IndexKey::Number(n)) => serde_json::json!({ "n": n }),
+            Some(IndexKey::String(key)) => serde_json::json!({ "s": key }),
+        },
+        deposed.as_deref().filter(|key| !key.is_empty()),
+    ])
+    .to_string();
     Verdict {
+        identity,
         address: address(
             resource.module.as_deref(),
             &resource.mode,

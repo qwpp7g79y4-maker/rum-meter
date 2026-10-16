@@ -189,7 +189,7 @@ costs:
 estimate: HCP Terraform bills the hourly peak; this is a single snapshot
 ```
 
-`diff` compares two states: added and removed counting addresses, instances that change rule, and the RUM difference. With `--prices` it also prints the monthly cost difference per tier.
+`diff` compares two states: added and removed counting addresses, instances that change rule, and the RUM difference. With `--prices` it also prints the monthly cost difference per tier. Two objects are the same only when module, mode, type, name, index key and deposed key all match, so a resource named `a[0]` and resource `a` at index 0 are one removal and one addition, even though both print as `random_id.a[0]`.
 
 ```console
 $ rum-meter diff tests/fixtures/v4_diff_old.json tests/fixtures/v4_diff_new.json

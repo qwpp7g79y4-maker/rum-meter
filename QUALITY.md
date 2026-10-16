@@ -17,6 +17,7 @@ This page shows how each release of rum-meter was checked before it was publishe
 - A second external automated code review. Every finding we could reproduce is fixed in this version, each with a regression test that uses the exact input.
 - Automated tests in CI: [run 38654547261](https://github.com/qwpp7g79y4-maker/rum-meter/actions/runs/38654547261) on Linux, Windows, macOS on Apple Silicon and Intel, and Rust 1.85, plus `cargo audit` (no known vulnerabilities).
 - A fresh independent final review on this commit against a fixed edge-case checklist (every item tried with a concrete bad input). It ended DONE; no blocking findings.
+- Unreleased: a later fresh final review of commit [`195b64c`](https://github.com/qwpp7g79y4-maker/rum-meter/commit/195b64c) found that `diff` could show a real removal and addition as no change when two objects print the same address (a resource named `a[0]` and resource `a` at index 0). That is fixed afterwards, with regression tests; the fixed code has not yet had a final review that ended DONE.
 
 ### What we found and fixed
 
