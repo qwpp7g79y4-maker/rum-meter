@@ -25,7 +25,24 @@ fn write_temp(group: &str, file: &str, body: &str) -> String {
     write_bytes(group, file, body.as_bytes())
 }
 
+/// Windows refuses a path part named like a device (`NUL`, `CON`, `COM1`, ...),
+/// with or without an extension and in any letter case, so a test that writes
+/// there passes on Linux and macOS but fails on Windows CI.
+fn is_windows_reserved(part: &str) -> bool {
+    let stem = part.split('.').next().unwrap_or(part).to_ascii_uppercase();
+    let stem = stem.trim_end_matches([' ', '.']);
+    matches!(stem, "CON" | "PRN" | "AUX" | "NUL")
+        || ((stem.starts_with("COM") || stem.starts_with("LPT"))
+            && stem.len() == 4
+            && stem.as_bytes()[3].is_ascii_digit()
+            && stem.as_bytes()[3] != b'0')
+}
+
 fn write_bytes(group: &str, file: &str, body: &[u8]) -> String {
+    assert!(
+        !is_windows_reserved(group) && !is_windows_reserved(file),
+        "temp path part {group:?}/{file:?} is a reserved device name on Windows"
+    );
     let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
         .join("edge-cases-more")
         .join(group);
@@ -92,7 +109,7 @@ fn embedded_nul_byte_in_a_for_each_key_is_escaped_in_text_and_kept_in_json() {
     // A control character inside a JSON string must be the `\u00XX` escape:
     // JSON forbids a literal NUL byte in a string, same as any other control byte.
     let body = r#"{"version":4,"resources":[{"mode":"managed","type":"local_file","name":"a","instances":[{"index_key":"x\u0000y","attributes":{"token":"CANARY-SECRET-ECM-NUL"}}]}]}"#;
-    let path = write_temp("nul", "state.json", body);
+    let path = write_temp("nul-byte", "state.json", body);
     let text = assert_ok("nul-text", &run(&["count", "--explain", &path]));
     assert!(
         !text.as_bytes().contains(&0u8),
@@ -114,7 +131,7 @@ fn embedded_nul_byte_in_a_for_each_key_is_escaped_in_text_and_kept_in_json() {
 #[test]
 fn nul_byte_outside_a_string_is_invalid_json_not_a_panic() {
     let body = b"{\"version\":4,\"resources\":[]\x00}";
-    let path = write_bytes("nul", "structural.json", body);
+    let path = write_bytes("nul-byte", "structural.json", body);
     assert_input_error("nul-structural", &run(&["count", &path]));
 }
 
@@ -230,4 +247,44 @@ fn index_key_number_past_u64_is_invalid_json_not_a_panic() {
     let body = r#"{"version":4,"resources":[{"mode":"managed","type":"random_id","name":"a","instances":[{"index_key":99999999999999999999999}]}]}"#;
     let path = write_temp("numbers", "huge-index.json", body);
     assert_input_error("huge-index", &run(&["count", &path]));
+}
+
+#[test]
+fn windows_reserved_temp_names_are_refused_before_writing() {
+    for reserved in [
+        "nul",
+        "NUL",
+        "Nul",
+        "nul.json",
+        "NUL.txt",
+        "con",
+        "CON.json",
+        "prn",
+        "aux",
+        "aux.state.json",
+        "com1",
+        "COM9",
+        "lpt1",
+        "LPT9.json",
+    ] {
+        assert!(
+            is_windows_reserved(reserved),
+            "{reserved} should be reserved"
+        );
+    }
+    for allowed in [
+        "nul-byte",
+        "null",
+        "nul_byte",
+        "console",
+        "auxiliary",
+        "com0",
+        "com10",
+        "lpt",
+        "state.json",
+        "structural.json",
+        "edge-cases-more",
+    ] {
+        assert!(!is_windows_reserved(allowed), "{allowed} should be allowed");
+    }
 }
