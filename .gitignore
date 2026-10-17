@@ -1,4 +1,8 @@
 /target
+/fuzz/target
+/fuzz/corpus
+/fuzz/artifacts
+/fuzz-*.log
 
 # OpenTofu work files. The fixture kept in git is terraform.tfstate in the same directory.
 tests/fixtures/tofu/**/.terraform/

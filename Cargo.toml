@@ -10,10 +10,17 @@ repository = "https://github.com/qwpp7g79y4-maker/rum-meter"
 readme = "README.md"
 keywords = ["terraform", "hcp", "cost", "rum", "cli"]
 categories = ["command-line-utilities", "development-tools"]
-exclude = [".github/", ".gitattributes"]
+exclude = [".github/", ".gitattributes", "fuzz/"]
+
+[lints.rust]
+# Set automatically by `cargo fuzz`; see the `parse_bytes_for_fuzzing` hooks.
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(fuzzing)"] }
 
 [dependencies]
 bigdecimal = "0.4"
 clap = { version = "4.5", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["raw_value"] }
+
+[dev-dependencies]
+proptest = "1"

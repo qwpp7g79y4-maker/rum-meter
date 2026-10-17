@@ -313,6 +313,16 @@ struct TierFields<'a> {
     price_per_rum_hour: Option<&'a RawValue>,
 }
 
+/// Parse price-file bytes directly, without touching the filesystem.
+///
+/// Exposed only under `cfg(fuzzing)` (set automatically by `cargo fuzz`), so the
+/// fuzz crate can drive the parser without the normal public API growing a
+/// bytes-in entry point.
+#[cfg(fuzzing)]
+pub fn parse_bytes_for_fuzzing(bytes: &[u8]) -> Result<PriceList, ()> {
+    parse_bytes(bytes).map_err(|_| ())
+}
+
 /// One leading UTF-8 BOM is skipped; UTF-16 and UTF-32 are refused.
 ///
 /// Prices stay raw JSON numbers until [`parse_price`], so a decimal such as

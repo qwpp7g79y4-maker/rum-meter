@@ -1,0 +1,51 @@
+[package]
+name = "rum-meter-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+serde_json = { version = "1", features = ["raw_value"] }
+bigdecimal = "0.4"
+
+[dependencies.rum-meter]
+path = ".."
+
+[[bin]]
+name = "state_parse"
+path = "fuzz_targets/state_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "price_parse"
+path = "fuzz_targets/price_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "cost_calc"
+path = "fuzz_targets/cost_calc.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "diff_fuzz"
+path = "fuzz_targets/diff_fuzz.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "render_fuzz"
+path = "fuzz_targets/render_fuzz.rs"
+test = false
+doc = false
+bench = false

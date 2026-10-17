@@ -8,6 +8,12 @@ All notable changes to this project are documented in this file.
 
 - `diff` matches objects on module, mode, type, name, index key and deposed key, not on the printed address. A resource named `a[0]` and resource `a` at index 0 are now one removal and one addition instead of no change.
 
+### Added
+
+- A `cargo-fuzz` harness (`fuzz/`, excluded from the published crate) with one target per stage that reads untrusted input: state parsing, price-tier parsing, cost calculation, `diff`, and rendering. Each asserts no panic, that JSON output always parses, that amounts are never negative, NaN or infinite, and that fields the tool drops (`attributes`, `sensitive_attributes`, `private`, `outputs`) never reach a report. A cheap nightly build-only CI job keeps the targets buildable.
+- `proptest` property tests that run under plain `cargo test`: the state and price parsers never panic on arbitrary bytes, the monthly cost matches an independent rational-arithmetic reference, and rendering the same verdicts twice is stable with JSON that always parses.
+- Regression tests for newline-only files, a lone CR, an escaped NUL byte, Unicode spaces and lookalike letters, a duplicate JSON key outside a price tier, deeply nested JSON, and the numbers `1e309`, `-0` and an out-of-range integer.
+
 ## [0.1.1] - 2026-10-14
 
 ### Fixed

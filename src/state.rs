@@ -214,6 +214,16 @@ pub fn load_state(path: &Path) -> Result<State, LoadError> {
     })
 }
 
+/// Parse state bytes directly, without touching the filesystem.
+///
+/// Exposed only under `cfg(fuzzing)` (set automatically by `cargo fuzz`), so the
+/// fuzz crate can drive the parser without the normal public API growing a
+/// bytes-in entry point.
+#[cfg(fuzzing)]
+pub fn parse_bytes_for_fuzzing(bytes: &[u8]) -> Result<State, ()> {
+    parse_bytes(bytes).map_err(|_| ())
+}
+
 fn parse_bytes(bytes: &[u8]) -> Result<State, ParseError> {
     let bytes = crate::encoding::utf8_body(bytes).map_err(ParseError::NotUtf8)?;
     if json_root_is_array(bytes) {
