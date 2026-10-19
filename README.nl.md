@@ -4,7 +4,7 @@
 
 Tel factureerbare HCP Terraform-resources in een lokaal statebestand, vóór de factuur.
 
-[![crates.io](https://img.shields.io/crates/v/rum-meter.svg)](https://crates.io/crates/rum-meter) [![CI](https://github.com/qwpp7g79y4-maker/rum-meter/actions/workflows/ci.yml/badge.svg)](https://github.com/qwpp7g79y4-maker/rum-meter/actions/workflows/ci.yml) [![PEPAI gecontroleerd](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fqwpp7g79y4-maker%2Frum-meter%2Fmain%2F.github%2Fbadge.json)](QUALITY.nl.md)
+[![crates.io](https://img.shields.io/crates/v/rum-meter.svg)](https://crates.io/crates/rum-meter) [![downloads](https://img.shields.io/crates/d/rum-meter.svg)](https://crates.io/crates/rum-meter) [![CI](https://github.com/qwpp7g79y4-maker/rum-meter/actions/workflows/ci.yml/badge.svg)](https://github.com/qwpp7g79y4-maker/rum-meter/actions/workflows/ci.yml) [![PEPAI gecontroleerd](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fqwpp7g79y4-maker%2Frum-meter%2Fmain%2F.github%2Fbadge.json)](QUALITY.nl.md) [![MSRV 1.85](https://img.shields.io/badge/MSRV-1.85-blue.svg)](https://github.com/qwpp7g79y4-maker/rum-meter/blob/main/Cargo.toml) [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#licentie)
 
 [Installatie](#installatie) • [Snel aan de slag](#snel-aan-de-slag) • [Hoe het rekent](#hoe-het-rekent) • [Alternatieven](#vergelijking-met-alternatieven) • [Beperkingen](#beperkingen) • [Referentie](docs/reference.nl.md)
 
