@@ -12,3 +12,4 @@ tests/fixtures/tofu/**/.terraform.tfstate.lock.info
 tests/fixtures/tofu/**/crash.log
 tests/fixtures/tofu/**/crash.*.log
 tests/fixtures/tofu/**/*.generated
+THIRD-PARTY-LICENSES.html
