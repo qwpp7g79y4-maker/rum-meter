@@ -22,7 +22,7 @@ Een vlag die het rapport niet zou veranderen is exit 3, met één vaste regel op
 | `--max-rum` | count | Exit 1 als de opgetelde RUM boven N ligt. N zelf valt binnen de grens. Het rapport wordt toch afgedrukt. |
 | `--max-increase` | diff | Exit 1 als nieuwe RUM min oude RUM boven N ligt. Een gelijke delta valt binnen de grens. Een daling valt binnen elke grens. Het rapport wordt toch afgedrukt. |
 | `--help` | overal | Toon de hulp en exit 0. `-h` is de korte vorm. |
-| `--version` | alleen het topniveau | Toon `rum-meter 0.1.0` en exit 0. `-V` is de korte vorm. |
+| `--version` | alleen het topniveau | Toon `rum-meter 0.1.1` en exit 0. `-V` is de korte vorm. |
 
 ## Prijsbestand
 

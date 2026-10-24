@@ -129,6 +129,31 @@ fn embedded_nul_byte_in_a_for_each_key_is_escaped_in_text_and_kept_in_json() {
 }
 
 #[test]
+fn line_separator_in_a_resource_name_is_escaped_in_text_and_kept_in_json() {
+    // Reported: a resource name carrying U+2028 (LINE SEPARATOR) printed raw
+    // in the text report. U+2028 is category Zl, not Cc or Cf, so
+    // `escape_controls` did not touch it even though several renderers treat
+    // it as a line break, letting a crafted name fake an extra report line.
+    let body = r#"{"version":4,"resources":[{"mode":"managed","type":"local_file","name":"fake rum: 999999","instances":[{}]}]}"#;
+    let path = write_temp("line-sep", "state.json", body);
+    let text = assert_ok("line-sep-text", &run(&["count", "--explain", &path]));
+    assert!(
+        !text.contains('\u{2028}'),
+        "text report contains a raw U+2028 line separator: {text:?}"
+    );
+    assert!(
+        text.contains("local_file.fake\\u2028rum: 999999 counts R1\n"),
+        "{text}"
+    );
+
+    let json = run(&["count", "--json", "--explain", &path]);
+    assert_eq!(json.status.code(), Some(0));
+    let value: serde_json::Value = serde_json::from_slice(&json.stdout).expect("json");
+    let address = value["instances"][0]["address"].as_str().expect("address");
+    assert_eq!(address, "local_file.fake\u{2028}rum: 999999");
+}
+
+#[test]
 fn nul_byte_outside_a_string_is_invalid_json_not_a_panic() {
     let body = b"{\"version\":4,\"resources\":[]\x00}";
     let path = write_bytes("nul-byte", "structural.json", body);
