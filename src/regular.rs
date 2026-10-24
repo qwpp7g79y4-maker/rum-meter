@@ -120,7 +120,7 @@ fn stdin_is_pipe_or_file() -> Result<bool, RegularError> {
     use std::os::windows::io::AsRawHandle;
 
     #[link(name = "kernel32")]
-    extern "system" {
+    unsafe extern "system" {
         fn GetFileType(handle: *mut std::ffi::c_void) -> u32;
     }
 
