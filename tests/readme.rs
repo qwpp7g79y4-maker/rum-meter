@@ -493,6 +493,8 @@ fn reference_describes_rules_and_price_errors() {
         "`duplicate tier name`",
         "`invalid price file`",
         "`currency is empty`",
+        "`currency is too long`",
+        "`currency is not visible ASCII`",
         "`monthly cost overflows`",
         "`file is UTF-16; save it as UTF-8`",
         "`duplicate address`",

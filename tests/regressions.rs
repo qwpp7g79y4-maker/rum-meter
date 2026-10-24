@@ -105,7 +105,7 @@ fn price_labels_escape_controls_in_text_and_preserve_them_in_json() {
     let prices = write_input(
         "labels",
         "prices.json",
-        r#"{"currency":"EUR\u001b[31m","tiers":[{"name":"tier\nextra\t","price_per_rum_hour":1}]}"#,
+        r#"{"currency":"EUR","tiers":[{"name":"tier\nextra\t","price_per_rum_hour":1}]}"#,
     );
     for command in ["count", "diff"] {
         let text = run(command, &fixture(), &prices, false, "1");
@@ -115,13 +115,13 @@ fn price_labels_escape_controls_in_text_and_preserve_them_in_json() {
         assert!(
             String::from_utf8(text.stdout)
                 .unwrap()
-                .contains("tier\\u000aextra\\u0009: EUR\\u001b[31m")
+                .contains("tier\\u000aextra\\u0009: EUR ")
         );
         let json = run(command, &fixture(), &prices, true, "1");
         assert!(json.status.success());
         let value: serde_json::Value = serde_json::from_slice(&json.stdout).unwrap();
         assert_eq!(value["costs"][0]["name"], "tier\nextra\t");
-        assert_eq!(value["costs"][0]["currency"], "EUR\u{1b}[31m");
+        assert_eq!(value["costs"][0]["currency"], "EUR");
         if command == "diff" {
             assert_eq!(value["cost_delta"][0]["name"], "tier\nextra\t");
         }
@@ -133,7 +133,7 @@ fn price_labels_escape_bidirectional_and_invisible_characters_in_text() {
     let prices = write_input(
         "format-chars",
         "prices.json",
-        r#"{"currency":"EUR\u202e","tiers":[{"name":"a\u200bb\u2066c\ufeff","price_per_rum_hour":1}]}"#,
+        r#"{"currency":"EUR","tiers":[{"name":"a\u200bb\u2066c\ufeff","price_per_rum_hour":1}]}"#,
     );
     for command in ["count", "diff"] {
         let text = run(command, &fixture(), &prices, false, "1");
@@ -145,10 +145,10 @@ fn price_labels_escape_bidirectional_and_invisible_characters_in_text() {
                 "{command}: {ch:?} reached the text report"
             );
         }
-        assert!(text.contains("a\\u200bb\\u2066c\\ufeff: EUR\\u202e"));
+        assert!(text.contains("a\\u200bb\\u2066c\\ufeff: EUR "));
         let json = run(command, &fixture(), &prices, true, "1");
         let value: serde_json::Value = serde_json::from_slice(&json.stdout).unwrap();
-        assert_eq!(value["costs"][0]["currency"], "EUR\u{202e}");
+        assert_eq!(value["costs"][0]["currency"], "EUR");
         assert_eq!(value["costs"][0]["name"], "a\u{200b}b\u{2066}c\u{feff}");
     }
 }

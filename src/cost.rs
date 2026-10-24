@@ -8,7 +8,9 @@
 //! A product that is negative, or that does not fit in the cent amount,
 //! is [`CostOverflow`]: the amount is never clamped.
 //! The program has no built-in prices. Error text is the path and the kind of
-//! problem, never bytes from the file.
+//! problem, never bytes from the file. `currency` is 1 to 16 visible ASCII
+//! characters (U+0021 through U+007E). A longer or other value is refused
+//! here, before it is copied onto each tier line.
 //!
 //! Only a regular file is read. The file is opened first, without waiting on
 //! Unix, and the type is taken from that descriptor before any byte is read.
@@ -25,6 +27,11 @@ use serde_json::value::RawValue;
 
 /// Hours in the monthly estimate when `--hours-per-month` is absent.
 pub const DEFAULT_HOURS_PER_MONTH: u64 = 730;
+
+/// `currency` is copied onto every tier line. Sixteen visible ASCII
+/// characters cover an ISO code and a short label. A longer value is refused
+/// at load, before those copies exist.
+const MAX_CURRENCY_CHARS: usize = 16;
 
 /// A price list read from disk. `price_per_rum_hour` is the exact decimal from the file.
 #[derive(Debug, Clone, PartialEq)]
@@ -157,6 +164,14 @@ pub enum PriceError {
     EmptyCurrency {
         path: PathBuf,
     },
+    /// `currency` is longer than 16 characters. The text is not printed.
+    CurrencyTooLong {
+        path: PathBuf,
+    },
+    /// `currency` is not visible ASCII (U+0021 `!` through U+007E `~`).
+    CurrencyNotAscii {
+        path: PathBuf,
+    },
     /// UTF-16 or UTF-32. Nothing was decoded.
     NotUtf8 {
         path: PathBuf,
@@ -176,6 +191,8 @@ enum ParseError {
     NegativePrice,
     NonNumericPrice,
     EmptyCurrency,
+    CurrencyTooLong,
+    CurrencyNotAscii,
     NotUtf8(crate::encoding::Wide),
 }
 
@@ -193,6 +210,8 @@ impl ParseError {
             Self::NegativePrice => PriceError::NegativePrice { path },
             Self::NonNumericPrice => PriceError::NonNumericPrice { path },
             Self::EmptyCurrency => PriceError::EmptyCurrency { path },
+            Self::CurrencyTooLong => PriceError::CurrencyTooLong { path },
+            Self::CurrencyNotAscii => PriceError::CurrencyNotAscii { path },
             Self::NotUtf8(wide) => PriceError::NotUtf8 {
                 path,
                 encoding: wide.name(),
@@ -288,6 +307,20 @@ impl fmt::Display for PriceError {
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
+            Self::CurrencyTooLong { path } => {
+                write!(
+                    f,
+                    "rum-meter: {}: currency is too long",
+                    crate::rum::escape_controls(&path.display().to_string())
+                )
+            }
+            Self::CurrencyNotAscii { path } => {
+                write!(
+                    f,
+                    "rum-meter: {}: currency is not visible ASCII",
+                    crate::rum::escape_controls(&path.display().to_string())
+                )
+            }
             Self::NotUtf8 { path, encoding } => {
                 write!(
                     f,
@@ -360,8 +393,8 @@ fn parse_bytes(bytes: &[u8]) -> Result<PriceList, ParseError> {
         serde_json::from_str(root.get()).map_err(|_| ParseError::Invalid)?;
     let currency = match fields.currency {
         Some(raw) => match serde_json::from_str::<String>(raw.get()) {
-            Ok(text) if !text.is_empty() => text,
-            _ => return Err(ParseError::EmptyCurrency),
+            Ok(text) => accept_currency(text)?,
+            Err(_) => return Err(ParseError::EmptyCurrency),
         },
         None => return Err(ParseError::EmptyCurrency),
     };
@@ -386,6 +419,22 @@ fn parse_bytes(bytes: &[u8]) -> Result<PriceList, ParseError> {
         currency,
         tiers: parsed,
     })
+}
+
+/// Empty stays [`ParseError::EmptyCurrency`]. Length is checked before the
+/// character class, and the check stops at the 17th character.
+fn accept_currency(text: String) -> Result<String, ParseError> {
+    if text.is_empty() {
+        return Err(ParseError::EmptyCurrency);
+    }
+    if text.chars().nth(MAX_CURRENCY_CHARS).is_some() {
+        return Err(ParseError::CurrencyTooLong);
+    }
+    if text.chars().all(|c| c.is_ascii_graphic()) {
+        Ok(text)
+    } else {
+        Err(ParseError::CurrencyNotAscii)
+    }
 }
 
 fn raw_is_array(raw: &str) -> bool {
@@ -811,6 +860,75 @@ mod tests {
         )
         .unwrap_err();
         assert!(matches!(err, PriceError::EmptyCurrency { .. }));
+    }
+
+    /// The breaktest-rum-0003 case: 40_000 `C`s and 800 tiers (about 71 KB).
+    /// Loading must refuse before that text is copied onto each tier line.
+    #[test]
+    fn oversized_currency_is_rejected_quickly() {
+        let body = format!(
+            r#"{{"currency":"{}","note":"{CANARY}-WIDE","tiers":[{}]}}"#,
+            "C".repeat(40_000),
+            (0..800)
+                .map(|i| format!(r#"{{"name":"t{i}","price_per_rum_hour":1}}"#))
+                .collect::<Vec<_>>()
+                .join(",")
+        );
+        let start = std::time::Instant::now();
+        let err = load_body("wide-currency.json", &body).unwrap_err();
+        assert!(start.elapsed() < std::time::Duration::from_millis(200));
+        assert!(matches!(err, PriceError::CurrencyTooLong { .. }));
+        let text = err.to_string();
+        assert!(text.contains("currency is too long"));
+        assert!(!text.contains(&"C".repeat(16)));
+    }
+
+    #[test]
+    fn currency_of_sixteen_visible_ascii_is_accepted() {
+        let currency = "A".repeat(MAX_CURRENCY_CHARS);
+        let body = format!(
+            r#"{{"currency":"{currency}","tiers":[{{"name":"t","price_per_rum_hour":1}}]}}"#
+        );
+        let prices = load_body("currency-16.json", &body).unwrap();
+        assert_eq!(prices.currency, currency);
+    }
+
+    #[test]
+    fn currency_past_sixteen_characters_is_rejected() {
+        let body = format!(
+            r#"{{"currency":"{}","note":"{CANARY}-SEVENTEEN","tiers":[{{"name":"t","price_per_rum_hour":1}}]}}"#,
+            "A".repeat(MAX_CURRENCY_CHARS + 1)
+        );
+        let err = load_body("currency-17.json", &body).unwrap_err();
+        assert!(matches!(err, PriceError::CurrencyTooLong { .. }));
+        let text = err.to_string();
+        assert!(text.ends_with("currency is too long"));
+        assert!(!text.contains(&"A".repeat(MAX_CURRENCY_CHARS + 1)));
+    }
+
+    #[test]
+    fn currency_outside_visible_ascii_is_rejected() {
+        for (name, currency) in [
+            ("currency-space.json", "EUR "),
+            ("currency-tab.json", "EU\t"),
+            ("currency-euro.json", "€"),
+            ("currency-del.json", "\u{7f}"),
+            ("currency-esc.json", "EUR\u{1b}[31m"),
+            ("currency-rlo.json", "EUR\u{202e}"),
+        ] {
+            let body = format!(
+                r#"{{"currency":{},"note":"{CANARY}-ASCII","tiers":[{{"name":"t","price_per_rum_hour":1}}]}}"#,
+                serde_json::to_string(currency).expect("currency json")
+            );
+            let err = load_body(name, &body).unwrap_err();
+            assert!(
+                matches!(err, PriceError::CurrencyNotAscii { .. }),
+                "{name}: {err}"
+            );
+            let text = err.to_string();
+            assert!(text.contains("currency is not visible ASCII"), "{name}");
+            assert!(!text.contains(currency), "{name}");
+        }
     }
 
     #[test]

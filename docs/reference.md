@@ -43,7 +43,7 @@ Prices come only from a JSON file you pass with `--prices`. The program has no b
 }
 ```
 
-`currency` is a non-empty string. `tiers` is a non-empty array of objects, each with a unique `name`. Each object has a non-empty `name` and a `price_per_rum_hour` that is a finite number, zero or greater. A repeated key in a tier is `duplicate key in a tier` (exit 2); a repeated tier name is `duplicate tier name` (exit 2). `0` is a valid price. Any other field, including `note`, is ignored and is not printed. The note in the example is Dutch. The file is an example, not a HashiCorp rate.
+`currency` is 1 to 16 visible ASCII characters (U+0021 `!` through U+007E `~`). `tiers` is a non-empty array of objects, each with a unique `name`. Each object has a non-empty `name` and a `price_per_rum_hour` that is a finite number, zero or greater. A repeated key in a tier is `duplicate key in a tier` (exit 2); a repeated tier name is `duplicate tier name` (exit 2). `0` is a valid price. Any other field, including `note`, is ignored and is not printed. The note in the example is Dutch. The file is an example, not a HashiCorp rate.
 
 A comma is not a decimal separator (`0.5`, not `0,5`). An unquoted `0,5` is invalid JSON. A quoted `"0,5"` is `price is not a number`.
 
@@ -51,6 +51,8 @@ Other price-file failures, each one line on stderr and nothing on stdout:
 
 - not an object, for example a JSON array: `invalid price file`
 - missing or empty currency: `currency is empty`
+- currency longer than 16 characters: `currency is too long`
+- currency that is not visible ASCII: `currency is not visible ASCII`
 - missing `tiers`, a `tiers` value that is not an array, or an empty array: `price file has no tiers`
 - a tier that is not an object: `tier is not an object`
 - a repeated key in a tier: `duplicate key in a tier`

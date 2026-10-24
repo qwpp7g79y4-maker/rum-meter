@@ -45,7 +45,7 @@ Prijzen komen alleen uit een JSON-bestand dat je met `--prices` meegeeft. Het pr
 }
 ```
 
-`currency` is een niet-lege tekst. `tiers` is een niet-lege lijst van objecten, elk met een unieke `name`. Elk object heeft een niet-lege `name` en een `price_per_rum_hour` die een eindig getal is, nul of hoger. Een herhaalde sleutel in een tier is `duplicate key in a tier` (exit 2); een herhaalde tiernaam is `duplicate tier name` (exit 2). `0` is een geldige prijs. Elk ander veld, ook `note`, wordt genegeerd en niet afgedrukt. De note in het voorbeeld is Nederlands. Het bestand is een voorbeeld en geen tarief van HashiCorp.
+`currency` is 1 tot 16 zichtbare ASCII-tekens (U+0021 `!` tot en met U+007E `~`). `tiers` is een niet-lege lijst van objecten, elk met een unieke `name`. Elk object heeft een niet-lege `name` en een `price_per_rum_hour` die een eindig getal is, nul of hoger. Een herhaalde sleutel in een tier is `duplicate key in a tier` (exit 2); een herhaalde tiernaam is `duplicate tier name` (exit 2). `0` is een geldige prijs. Elk ander veld, ook `note`, wordt genegeerd en niet afgedrukt. De note in het voorbeeld is Nederlands. Het bestand is een voorbeeld en geen tarief van HashiCorp.
 
 Een komma is geen decimaalteken (`0.5`, not `0,5`). Een `0,5` zonder aanhalingstekens is ongeldige JSON. Een `"0,5"` tussen aanhalingstekens is `price is not a number`.
 
@@ -53,6 +53,8 @@ Andere fouten in het prijsbestand, elk één regel op stderr en niets op stdout:
 
 - geen object, bijvoorbeeld een JSON-array: `invalid price file`
 - valuta ontbreekt of is leeg: `currency is empty`
+- valuta langer dan 16 tekens: `currency is too long`
+- valuta die geen zichtbare ASCII is: `currency is not visible ASCII`
 - `tiers` ontbreekt, is geen lijst, of is een lege lijst: `price file has no tiers`
 - een tier die geen object is: `tier is not an object`
 - een herhaalde sleutel in een tier: `duplicate key in a tier`
