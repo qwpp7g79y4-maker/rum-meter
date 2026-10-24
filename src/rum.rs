@@ -125,13 +125,17 @@ pub fn escape_controls(text: &str) -> Cow<'_, str> {
 /// Control characters (Unicode Cc), plus the format characters (Cf) that
 /// are invisible or change text direction: the Arabic letter mark, zero-width
 /// characters, bidirectional embeddings, overrides and isolates, invisible
-/// operators and the byte order mark.
+/// operators and the byte order mark. Also U+2028 and U+2029 (categories Zl
+/// and Zp), which are not control or format characters but are still a line
+/// break in several renderers, so an address, path or label carrying one
+/// could otherwise fake an extra line in a text report.
 fn needs_escape(ch: char) -> bool {
     ch.is_control()
         || matches!(
             ch,
             '\u{061C}'
                 | '\u{200B}'..='\u{200F}'
+                | '\u{2028}'..='\u{2029}'
                 | '\u{202A}'..='\u{202E}'
                 | '\u{2060}'..='\u{2064}'
                 | '\u{2066}'..='\u{2069}'
@@ -318,6 +322,20 @@ mod tests {
             escape_controls("a\u{1b}\u{85}\u{61c}\u{200b}\u{202e}\u{2060}\u{2069}\u{feff}z"),
             "a\\u001b\\u0085\\u061c\\u200b\\u202e\\u2060\\u2069\\ufeffz"
         );
+    }
+
+    #[test]
+    fn escape_controls_escapes_line_and_paragraph_separators() {
+        // Reported: U+2028 (LINE SEPARATOR) and U+2029 (PARAGRAPH SEPARATOR)
+        // are not `is_control()` and were not in the Cf allow-list, so a
+        // crafted address or path could print one raw. Several renderers
+        // treat U+2028/U+2029 as a line break, which is exactly the "visually
+        // reorder a line" injection this function exists to prevent.
+        assert_eq!(
+            escape_controls("fake\u{2028}rum: 999999"),
+            "fake\\u2028rum: 999999"
+        );
+        assert_eq!(escape_controls("a\u{2029}z"), "a\\u2029z");
     }
 
     #[test]

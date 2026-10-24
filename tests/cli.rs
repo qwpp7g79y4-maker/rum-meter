@@ -72,3 +72,22 @@ fn diff_with_one_file_exits_3() {
         status_line(&output)
     );
 }
+
+#[test]
+fn version_matches_the_published_crate_version() {
+    // Reported: docs/reference.md and docs/reference.nl.md said `--version`
+    // shows `rum-meter 0.1.0`, which was true for 0.1.0 but went stale when
+    // the crate moved to 0.1.1 without the docs being updated. Pin the
+    // output to Cargo.toml's version so a future bump cannot drift silently.
+    let output = run(&["--version"]);
+    assert!(
+        output.status.success(),
+        "--version should exit 0\n{}",
+        status_line(&output)
+    );
+    let stdout = String::from_utf8(output.stdout).expect("version is utf-8");
+    assert_eq!(
+        stdout,
+        format!("rum-meter {}\n", env!("CARGO_PKG_VERSION"))
+    );
+}

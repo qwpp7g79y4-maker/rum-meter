@@ -8,6 +8,8 @@ All notable changes to this project are documented in this file.
 
 - `diff` matches objects on module, mode, type, name, index key and deposed key, not on the printed address. A resource named `a[0]` and resource `a` at index 0 are now one removal and one addition instead of no change.
 - A price file with two tiers of the same name is exit 2, `duplicate tier name`, and prints no cost.
+- Text output now escapes U+2028 (LINE SEPARATOR) and U+2029 (PARAGRAPH SEPARATOR) the same way it escapes other invisible or bidirectional format characters. An address, file path, module name, type or price label carrying one of these could otherwise print a raw character that several renderers treat as a line break, faking an extra line in a report.
+- `docs/reference.md` and `docs/reference.nl.md` said `--version` shows `rum-meter 0.1.0`; it has shown `rum-meter 0.1.1` since that release. The text now matches, and a test pins it to the crate version.
 
 ### Added
 

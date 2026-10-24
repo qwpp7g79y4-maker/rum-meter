@@ -20,7 +20,7 @@ A flag that would not change the report is exit 3, with one fixed line on stderr
 | `--max-rum` | count | Exit 1 when the summed RUM is above N. N itself is within the limit. The report is still printed. |
 | `--max-increase` | diff | Exit 1 when new RUM minus old RUM is above N. An equal delta is within the limit. A decrease is within every limit. The report is still printed. |
 | `--help` | everywhere | Show help and exit 0. `-h` is the short form. |
-| `--version` | top level | Show `rum-meter 0.1.0` and exit 0. `-V` is the short form. |
+| `--version` | top level | Show `rum-meter 0.1.1` and exit 0. `-V` is the short form. |
 
 ## Price file
 
