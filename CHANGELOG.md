@@ -2,21 +2,32 @@
 
 All notable changes to this project are documented in this file.
 
-## [Unreleased]
+## [0.1.2] - 2026-10-24
 
 ### Fixed
 
 - `diff` matches objects on module, mode, type, name, index key and deposed key, not on the printed address. A resource named `a[0]` and resource `a` at index 0 are now one removal and one addition instead of no change.
 - A price file with two tiers of the same name is exit 2, `duplicate tier name`, and prints no cost.
+- When a real module or type is named `other`, `--top` no longer prints two indistinguishable `other` rows. The remainder is `(other)`, or `(other N)` when several rows are folded together, so the names stay unique.
+- A repeated key inside one price tier is `duplicate key in a tier`, not `tier is not an object`.
 - Text output now escapes U+2028 (LINE SEPARATOR) and U+2029 (PARAGRAPH SEPARATOR) the same way it escapes other invisible or bidirectional format characters. An address, file path, module name, type or price label carrying one of these could otherwise print a raw character that several renderers treat as a line break, faking an extra line in a report.
-- `docs/reference.md` and `docs/reference.nl.md` said `--version` shows `rum-meter 0.1.0`; it has shown `rum-meter 0.1.1` since that release. The text now matches, and a test pins it to the crate version.
+- `docs/reference.md` and `docs/reference.nl.md` named a stale `--version` string (`rum-meter 0.1.0`). They now follow the crate version, and a test pins `--version` to that version.
+- On edition 2024 the Windows `extern` block is `unsafe`, so the crate builds with that edition.
+- `--prices -` is a missing file and exits 2. A price path has no stdin special case, and the test expects that exit code.
+- The unix-only `File` import in the stdin test is compiled only on unix.
+- `tests/cli.rs` matches `cargo fmt`.
+- Test temporary directories stay off Windows device names such as `NUL`, and the suite guards against those names.
 
-### Added
+### Changed
 
 - A state path `-` reads stdin when stdin is a pipe or a regular file. A terminal or a device on stdin is refused. The quick start includes a block that needs no file from this repository.
 - A `cargo-fuzz` harness (`fuzz/`, excluded from the published crate) with one target per stage that reads untrusted input: state parsing, price-tier parsing, cost calculation, `diff`, and rendering. Each asserts no panic, that JSON output always parses, that amounts are never negative, NaN or infinite, and that fields the tool drops (`attributes`, `sensitive_attributes`, `private`, `outputs`) never reach a report. A cheap nightly build-only CI job keeps the targets buildable.
 - `proptest` property tests that run under plain `cargo test`: the state and price parsers never panic on arbitrary bytes, the monthly cost matches an independent rational-arithmetic reference, and rendering the same verdicts twice is stable with JSON that always parses.
 - Regression tests for newline-only files, a lone CR, an escaped NUL byte, Unicode spaces and lookalike letters, a duplicate JSON key outside a price tier, deeply nested JSON, and the numbers `1e309`, `-0` and an out-of-range integer.
+- Release archives include third-party licenses, and CI checks the licenses of dependencies. `THIRD-PARTY-LICENSES.html` is generated once, on Linux, because there is no cargo-about binary for Intel macOS.
+- `SECURITY.md` and a Dependabot config are in the repository. Dependabot opens cargo security updates only, so the MSRV stays 1.85, and it ignores `dtolnay/rust-toolchain` because that ref is the Rust version.
+- The README shows downloads, MSRV, license and quality badges. The quality report for this line of work is in the tree, including the DONE final review of the diff-identity fix.
+- CI and the release workflows use the Node 24 action versions. CI also runs the test suite in release mode.
 
 ## [0.1.1] - 2026-10-14
 
