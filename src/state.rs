@@ -15,7 +15,8 @@
 //! Only a regular file is read. The file is opened first, without waiting on
 //! Unix, and the type is taken from that descriptor before any byte is read.
 //! A directory, a FIFO, a device, or a symlink to one of those is refused.
-//! A symlink to a regular file is read.
+//! A symlink to a regular file is read. The path `-` is not a file: it reads
+//! stdin when stdin is a pipe or a regular file, and refuses a device.
 
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -202,8 +203,14 @@ impl std::error::Error for LoadError {}
 /// for JSON the line and column. It never includes bytes from the file.
 ///
 /// A path that is not a regular file is refused without reading a byte.
+/// The path `-` reads stdin instead: a pipe or a regular file, to the end.
+/// A terminal or a device on stdin is refused without reading a byte.
 pub fn load_state(path: &Path) -> Result<State, LoadError> {
-    let bytes = crate::regular::read_regular(path).map_err(|err| read_error(path, err))?;
+    let bytes = if path == Path::new("-") {
+        crate::regular::read_stdin().map_err(|err| read_error(path, err))?
+    } else {
+        crate::regular::read_regular(path).map_err(|err| read_error(path, err))?
+    };
     parse_bytes(&bytes).map_err(|err| match err {
         ParseError::InvalidJson { line, column } => LoadError::invalid_json(path, line, column),
         ParseError::UnsupportedVersion => LoadError::unsupported_version(path),

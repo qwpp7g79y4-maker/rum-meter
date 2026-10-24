@@ -77,6 +77,68 @@ fn open_regular(path: &Path) -> Result<File, RegularError> {
     }
 }
 
+/// Bytes from stdin for the state path `-`.
+///
+/// A pipe or a regular file is read to the end. A terminal, a device, or any
+/// other kind is [`RegularError::NotRegular`] and nothing is read. A path that
+/// is a FIFO is still refused by [`read_regular`]; this function is only for
+/// the literal argument `-`.
+pub(crate) fn read_stdin() -> Result<Vec<u8>, RegularError> {
+    if !stdin_is_pipe_or_file()? {
+        return Err(RegularError::NotRegular);
+    }
+    let mut bytes = Vec::new();
+    io::stdin()
+        .lock()
+        .read_to_end(&mut bytes)
+        .map_err(|err| RegularError::Unreadable {
+            kind: io_kind_label(err.kind()),
+        })?;
+    Ok(bytes)
+}
+
+/// `true` when stdin is a pipe or a regular file. A character device is `false`.
+#[cfg(unix)]
+fn stdin_is_pipe_or_file() -> Result<bool, RegularError> {
+    use std::mem::ManuallyDrop;
+    use std::os::fd::{AsRawFd, FromRawFd};
+    use std::os::unix::fs::FileTypeExt;
+
+    let fd = io::stdin().as_raw_fd();
+    // SAFETY: `fd` is this process's stdin and must stay open. `ManuallyDrop`
+    // keeps the wrapper from closing it when the metadata check returns.
+    let file = ManuallyDrop::new(unsafe { std::fs::File::from_raw_fd(fd) });
+    match file.metadata() {
+        Ok(meta) => Ok(meta.file_type().is_fifo() || meta.is_file()),
+        Err(err) => Err(unreadable(err)),
+    }
+}
+
+/// `true` when stdin is a pipe or a disk file. A character device is `false`.
+#[cfg(windows)]
+fn stdin_is_pipe_or_file() -> Result<bool, RegularError> {
+    use std::os::windows::io::AsRawHandle;
+
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn GetFileType(handle: *mut std::ffi::c_void) -> u32;
+    }
+
+    const FILE_TYPE_DISK: u32 = 1;
+    const FILE_TYPE_PIPE: u32 = 3;
+
+    let handle = io::stdin().as_raw_handle();
+    // SAFETY: `handle` is this process's stdin. `GetFileType` only queries it.
+    let kind = unsafe { GetFileType(handle) };
+    Ok(kind == FILE_TYPE_DISK || kind == FILE_TYPE_PIPE)
+}
+
+/// Platforms other than Unix and Windows have no stdin type check here.
+#[cfg(not(any(unix, windows)))]
+fn stdin_is_pipe_or_file() -> Result<bool, RegularError> {
+    Ok(false)
+}
+
 fn unreadable(err: io::Error) -> RegularError {
     RegularError::Unreadable {
         kind: io_kind_label(err.kind()),

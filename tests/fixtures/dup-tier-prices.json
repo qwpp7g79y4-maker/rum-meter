@@ -1,0 +1,14 @@
+{
+  "note": "Synthetic. Not a HashiCorp rate.",
+  "currency": "EUR",
+  "tiers": [
+    {
+      "name": "dup",
+      "price_per_rum_hour": 1
+    },
+    {
+      "name": "dup",
+      "price_per_rum_hour": 2
+    }
+  ]
+}

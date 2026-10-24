@@ -14,7 +14,7 @@ De uitvoer van de tool is Engels; de voorbeelden hieronder tonen die precies zoa
 
 ## Waarom
 
-HCP Terraform rekent per RUM af. Een team ziet die telling op de billingpagina, achteraf, zonder uitleg per resource. rum-meter laat vooraf, op de eigen machine, zien hoeveel RUM een state heeft, in welke module en welk type dat zit, en wat een wijziging toevoegt of weghaalt. Betaalbereidheid is niet onderzocht. De zinnen van HashiCorp waar dit op steunt zijn nagelezen op 7 oktober 2026 en staan onder [Vergelijking met alternatieven](#vergelijking-met-alternatieven).
+HCP Terraform rekent per RUM af. Een team ziet die telling op de billingpagina, achteraf, zonder uitleg per resource. rum-meter laat vooraf, op de eigen machine, zien hoeveel RUM een state heeft, in welke module en welk type dat zit, en wat een wijziging toevoegt of weghaalt. Dit is een plausibel scenario, geen bevestigde klacht: er is geen verifieerbaar bericht gevonden van een team dat een HCP Terraform RUM-rekening betwist. Betaalbereidheid is niet onderzocht. De zinnen van HashiCorp waar dit op steunt zijn nagelezen op 7 oktober 2026 en staan onder [Vergelijking met alternatieven](#vergelijking-met-alternatieven).
 
 ## Installatie
 
@@ -44,6 +44,39 @@ Vanuit een lokale clone: `cargo install --locked --path .`, of `cargo build --re
 De binaries worden gebouwd en met een rooktest gecontroleerd op runners van GitHub (Ubuntu, macOS op Apple Silicon en Intel, Windows). Bouwen vanuit de broncode vraagt Rust 1.85 of nieuwer op elk platform dat Rust ondersteunt.
 
 ## Snel aan de slag
+
+Een state-argument `-` leest stdin. Elk ander statepad is een bestandspad, geen pipe of stdin (zie [Beperkingen](#beperkingen)).
+
+Dit blok heeft geen bestand uit deze repository nodig. Gekopieerd naar een willekeurige map, met `rum-meter` op `PATH`, drukt het het rapport hieronder af.
+
+```sh
+cat <<'EOF' | rum-meter count -
+{
+  "version": 4,
+  "resources": [
+    {
+      "mode": "managed",
+      "type": "random_id",
+      "name": "one",
+      "instances": [{}]
+    }
+  ]
+}
+EOF
+```
+
+```text
+file: -
+rum: 1
+not counted: R2 0, R3 0, R4 0
+total rum: 1
+not counted: R2 0, R3 0, R4 0
+modules:
+  (root): 1
+types:
+  random_id: 1
+estimate: HCP Terraform bills the hourly peak; this is a single snapshot
+```
 
 Dit is de echte uitvoer van de binary op de synthetische fixtures in `tests/fixtures`. Een test draait elk voorbeeld en vergelijkt de uitvoer.
 
@@ -265,13 +298,13 @@ De billingpagina toont de telling achteraf. rum-meter leest een bestand dat je a
 - Een state hoort elk adres één keer te hebben. Komt een adres twee keer voor, op root, in een module, met count of for_each, of als deposed object, dan telt rum-meter die state niet: exit 2, met het adres en de reden, zonder attribuutwaarden. Dezelfde regel geldt als `count` meerdere bestanden krijgt: het bestand dat een adres herhaalt is exit 2, en de totalen worden niet afgedrukt. Bij `diff` blijven added en removed daardoor optellen tot de RUM-delta.
 - rum-meter leest UTF-8, voor statebestanden en prijsbestanden. Een UTF-8 BOM aan het begin van het bestand wordt overgeslagen. Een UTF-16- of UTF-32-bestand, met of zonder BOM, zoals Windows PowerShell 5.1 bij een redirect schrijft, wordt niet omgezet. Dat is exit 2, met de melding dat het bestand UTF-16 (of UTF-32) is en als UTF-8 opgeslagen moet worden, bijvoorbeeld met `iconv -f UTF-16 -t UTF-8` of in PowerShell met `Out-File -Encoding utf8`. CRLF-regeleinden zijn geen probleem.
 - Een bestandsnaam die geen geldige UTF-8 is (kan op Linux) wordt wel gelezen, maar in het rapport getoond met U+FFFD voor de ongeldige bytes.
-- rum-meter leest alleen gewone bestanden, dus geen pipe of process substitution. Een map, een FIFO of een apparaat wordt geweigerd met exit 2 voordat er een byte wordt gelezen. Een symlink naar een FIFO wordt op dezelfde manier geweigerd. Het openen wacht niet, en het type komt van het geopende bestand, zodat een pad dat een FIFO wordt niet wordt gelezen en niet blijft hangen. Een symlink naar een gewoon bestand wordt wel gelezen.
+- rum-meter leest alleen gewone bestanden, dus geen pipe of process substitution. Een map, een FIFO of een apparaat wordt geweigerd met exit 2 voordat er een byte wordt gelezen. Een symlink naar een FIFO wordt op dezelfde manier geweigerd. Het openen wacht niet, en het type komt van het geopende bestand, zodat een pad dat een FIFO wordt niet wordt gelezen en niet blijft hangen. Een symlink naar een gewoon bestand wordt wel gelezen. Het state-argument `-` is de uitzondering: stdin wordt tot het einde gelezen als het een pipe of een gewoon bestand is. Een terminal of een apparaat op stdin is `not a regular file`, en er wordt niets gelezen.
 
 Waar de fixtures vandaan komen: [tests/fixtures/README.md](tests/fixtures/README.md).
 
 ## Privacy
 
-rum-meter werkt volledig offline: geen netwerk, geen API-sleutel, geen telemetrie. De binary leest alleen de paden die je opgeeft. In de uitvoer staan adressen, modulepaden, types, regelcodes en aantallen. Attribuutwaarden, sensitive values, private data en outputs blijven achterwege. `tests/safety.rs` bewaakt dat met synthetische fixtures. Geen foutmelding bevat bytes uit het bestand, alleen het pad, de regel en de kolom van een parsefout, en het soort fout.
+rum-meter werkt volledig offline: geen netwerk, geen API-sleutel, geen telemetrie. De binary leest alleen de paden die je opgeeft, of stdin als een statepad `-` is. In de uitvoer staan adressen, modulepaden, types, regelcodes en aantallen. Attribuutwaarden, sensitive values, private data en outputs blijven achterwege. `tests/safety.rs` bewaakt dat met synthetische fixtures. Geen foutmelding bevat bytes uit het bestand, alleen het pad, de regel en de kolom van een parsefout, en het soort fout.
 
 ## Steunen
 

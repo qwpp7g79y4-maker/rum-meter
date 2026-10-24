@@ -43,7 +43,7 @@ Prices come only from a JSON file you pass with `--prices`. The program has no b
 }
 ```
 
-`currency` is a non-empty string. `tiers` is a non-empty array of objects. Each object has a non-empty `name` and a `price_per_rum_hour` that is a finite number, zero or greater. A repeated key in a tier is `duplicate key in a tier` (exit 2). `0` is a valid price. Any other field, including `note`, is ignored and is not printed. The note in the example is Dutch. The file is an example, not a HashiCorp rate.
+`currency` is a non-empty string. `tiers` is a non-empty array of objects, each with a unique `name`. Each object has a non-empty `name` and a `price_per_rum_hour` that is a finite number, zero or greater. A repeated key in a tier is `duplicate key in a tier` (exit 2); a repeated tier name is `duplicate tier name` (exit 2). `0` is a valid price. Any other field, including `note`, is ignored and is not printed. The note in the example is Dutch. The file is an example, not a HashiCorp rate.
 
 A comma is not a decimal separator (`0.5`, not `0,5`). An unquoted `0,5` is invalid JSON. A quoted `"0,5"` is `price is not a number`.
 
@@ -55,6 +55,7 @@ Other price-file failures, each one line on stderr and nothing on stdout:
 - a tier that is not an object: `tier is not an object`
 - a repeated key in a tier: `duplicate key in a tier`
 - an empty tier name: `tier name is empty`
+- two tiers with the same name: `duplicate tier name`
 - a price that is missing, not a number, or not finite: `price is not a number`
 - a negative price: `price is negative`
 - the path is not a regular file: `not a regular file`
@@ -77,7 +78,7 @@ The reader stores `version`, and for each resource `mode`, `type`, `name`, `modu
 
 The file must be UTF-8; the same holds for a price file. A leading UTF-8 BOM (the 3 bytes `EF BB BF`) is skipped. A UTF-16 BOM (`FF FE` or `FE FF`), such as Windows PowerShell 5.1 writes on a redirect, is not converted. That is exit 2: `file is UTF-16; save it as UTF-8`. A UTF-32 BOM (`FF FE 00 00` or `00 00 FE FF`) gives `file is UTF-32; save it as UTF-8`. Without a BOM the encoding is recognised by the NUL bytes among the first 4 bytes, as in RFC 4627: a JSON text starts with an ASCII character. Nothing of such a file is decoded. CRLF line ends count the same as LF. A path that is not valid UTF-8 is read and shown with U+FFFD for the invalid bytes, in text and in JSON.
 
-Only a regular file is read, for a state and for a price file. The file is opened without waiting, and the type is taken from that opened file, before any byte of it is read. A directory, a FIFO, a device, or a symlink to one of those is `not a regular file`. A path that becomes a FIFO is not read and does not hang. A symlink to a regular file is read. That is why a pipe or process substitution does not work. A missing path is `unreadable (not found)`. The other unreadable kinds are `permission denied`, `is a directory` and `io error`.
+Only a regular file is read, for a state and for a price file. The file is opened without waiting, and the type is taken from that opened file, before any byte of it is read. A directory, a FIFO, a device, or a symlink to one of those is `not a regular file`. A path that becomes a FIFO is not read and does not hang. A symlink to a regular file is read. That is why a pipe or process substitution does not work. The state argument `-` reads stdin instead, to the end, when stdin is a pipe or a regular file. A terminal or a device on stdin is `not a regular file`. A price path is always a file. A missing path is `unreadable (not found)`. The other unreadable kinds are `permission denied`, `is a directory` and `io error`.
 
 Each address may occur once, in one file and across the files passed to `count`. A repeat, at the root, in a module, with count or for_each, as a deposed object, or in a later file, is exit 2: `duplicate address`, plus the address. Control characters, and invisible or bidirectional format characters such as U+200B and U+202E, in that address are written as `\uXXXX`. Attribute values are not included. The first repeat in verdict order is the one reported. On `diff`, added and removed therefore still add up to the RUM delta. Text output escapes control characters the same way. JSON keeps the characters and lets the JSON encoder escape them.
 
@@ -165,6 +166,7 @@ Every row below is run against the binary. The message is the whole stderr, and 
 | `--prices` | count | The price path is a directory. | `count --prices tests/fixtures tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures: not a regular file\n` |
 | `--prices` | count | The price file is missing. | `count --prices tests/fixtures/missing-prices.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/missing-prices.json: unreadable (not found)\n` |
 | `--prices` | count | The price file is empty. | `count --prices tests/fixtures/empty.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/empty.json: invalid json at line 1 column 0\n` |
+| `--prices` | count | Two tiers have the same name. | `count --prices tests/fixtures/dup-tier-prices.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/dup-tier-prices.json: duplicate tier name\n` |
 | state file | diff | The old state is version 3. | `diff tests/fixtures/version_3.json tests/fixtures/v4_handwritten.json` | 2 | `rum-meter: tests/fixtures/version_3.json: state version is not 4\n` |
 | state file | count | A device is not a regular file (Linux and macOS). | `count /dev/null` | 2 | `rum-meter: /dev/null: not a regular file\n` |
 | `--prices` | count | The price path is a device (Linux and macOS). | `count --prices /dev/null tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: /dev/null: not a regular file\n` |

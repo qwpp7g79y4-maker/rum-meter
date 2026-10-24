@@ -45,7 +45,7 @@ Prijzen komen alleen uit een JSON-bestand dat je met `--prices` meegeeft. Het pr
 }
 ```
 
-`currency` is een niet-lege tekst. `tiers` is een niet-lege lijst van objecten. Elk object heeft een niet-lege `name` en een `price_per_rum_hour` die een eindig getal is, nul of hoger. Een herhaalde sleutel in een tier is `duplicate key in a tier` (exit 2). `0` is een geldige prijs. Elk ander veld, ook `note`, wordt genegeerd en niet afgedrukt. De note in het voorbeeld is Nederlands. Het bestand is een voorbeeld en geen tarief van HashiCorp.
+`currency` is een niet-lege tekst. `tiers` is een niet-lege lijst van objecten, elk met een unieke `name`. Elk object heeft een niet-lege `name` en een `price_per_rum_hour` die een eindig getal is, nul of hoger. Een herhaalde sleutel in een tier is `duplicate key in a tier` (exit 2); een herhaalde tiernaam is `duplicate tier name` (exit 2). `0` is een geldige prijs. Elk ander veld, ook `note`, wordt genegeerd en niet afgedrukt. De note in het voorbeeld is Nederlands. Het bestand is een voorbeeld en geen tarief van HashiCorp.
 
 Een komma is geen decimaalteken (`0.5`, not `0,5`). Een `0,5` zonder aanhalingstekens is ongeldige JSON. Een `"0,5"` tussen aanhalingstekens is `price is not a number`.
 
@@ -57,6 +57,7 @@ Andere fouten in het prijsbestand, elk één regel op stderr en niets op stdout:
 - een tier die geen object is: `tier is not an object`
 - een herhaalde sleutel in een tier: `duplicate key in a tier`
 - een lege tiernaam: `tier name is empty`
+- twee tiers met dezelfde naam: `duplicate tier name`
 - een prijs die ontbreekt, geen getal is, of niet eindig is: `price is not a number`
 - een negatieve prijs: `price is negative`
 - het pad is geen gewoon bestand: `not a regular file`
@@ -79,7 +80,7 @@ De lezer bewaart `version`, en per resource `mode`, `type`, `name`, `module` en 
 
 Het bestand moet UTF-8 zijn; dat geldt ook voor een prijsbestand. Een UTF-8 BOM vooraan (de 3 bytes `EF BB BF`) wordt overgeslagen. Een UTF-16 BOM (`FF FE` of `FE FF`), zoals Windows PowerShell 5.1 bij een redirect schrijft, wordt niet omgezet. Dat is exit 2: `file is UTF-16; save it as UTF-8`. Een UTF-32 BOM (`FF FE 00 00` of `00 00 FE FF`) geeft `file is UTF-32; save it as UTF-8`. Zonder BOM wordt de codering herkend aan de NUL-bytes in de eerste 4 bytes, zoals in RFC 4627: een JSON-tekst begint met een ASCII-teken. Niets van zo'n bestand wordt gedecodeerd. CRLF-regeleinden tellen hetzelfde als LF. Een pad dat geen geldige UTF-8 is wordt gelezen en getoond met U+FFFD voor de ongeldige bytes, in tekst en in JSON.
 
-Alleen een gewoon bestand wordt gelezen, voor een state en voor een prijsbestand. Het bestand wordt geopend zonder te wachten, en het type komt van dat geopende bestand, vóór er een byte van wordt gelezen. Een map, een FIFO, een apparaat of een symlink daarnaartoe is `not a regular file`. Een pad dat een FIFO wordt, wordt niet gelezen en blijft niet hangen. Een symlink naar een gewoon bestand wordt wel gelezen. Daarom werken een pipe en process substitution niet. Een ontbrekend pad is `unreadable (not found)`. De andere onleesbare soorten zijn `permission denied`, `is a directory` en `io error`.
+Alleen een gewoon bestand wordt gelezen, voor een state en voor een prijsbestand. Het bestand wordt geopend zonder te wachten, en het type komt van dat geopende bestand, vóór er een byte van wordt gelezen. Een map, een FIFO, een apparaat of een symlink daarnaartoe is `not a regular file`. Een pad dat een FIFO wordt, wordt niet gelezen en blijft niet hangen. Een symlink naar een gewoon bestand wordt wel gelezen. Daarom werken een pipe en process substitution niet. Het state-argument `-` leest in plaats daarvan stdin, tot het einde, als stdin een pipe of een gewoon bestand is. Een terminal of een apparaat op stdin is `not a regular file`. Een prijzenpad is altijd een bestand. Een ontbrekend pad is `unreadable (not found)`. De andere onleesbare soorten zijn `permission denied`, `is a directory` en `io error`.
 
 Elk adres mag één keer voorkomen, in één bestand en over de bestanden die aan `count` worden meegegeven. Een herhaling, op root, in een module, met count of for_each, als deposed object, of in een later bestand, is exit 2: `duplicate address`, plus het adres. Stuurtekens, en onzichtbare of tekstrichting-wijzigende opmaaktekens zoals U+200B en U+202E, in dat adres worden geschreven als `\uXXXX`. Attribuutwaarden zitten er niet bij. De eerste herhaling in de volgorde van de beslissingen wordt gemeld. Bij `diff` blijven added en removed daardoor optellen tot de RUM-delta. Tekstuitvoer escapt stuurtekens op dezelfde manier. JSON houdt de tekens en laat de JSON-encoder ze escapen.
 
@@ -167,6 +168,7 @@ Elke rij hieronder draait tegen de binary. De melding is de hele stderr, en `\n`
 | `--prices` | count | Het prijzenpad is een map. | `count --prices tests/fixtures tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures: not a regular file\n` |
 | `--prices` | count | Het prijsbestand ontbreekt. | `count --prices tests/fixtures/missing-prices.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/missing-prices.json: unreadable (not found)\n` |
 | `--prices` | count | Het prijsbestand is leeg. | `count --prices tests/fixtures/empty.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/empty.json: invalid json at line 1 column 0\n` |
+| `--prices` | count | Twee tiers hebben dezelfde naam. | `count --prices tests/fixtures/dup-tier-prices.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/dup-tier-prices.json: duplicate tier name\n` |
 | statebestand | diff | De oude state is versie 3. | `diff tests/fixtures/version_3.json tests/fixtures/v4_handwritten.json` | 2 | `rum-meter: tests/fixtures/version_3.json: state version is not 4\n` |
 | statebestand | count | Een apparaat is geen gewoon bestand (Linux en macOS). | `count /dev/null` | 2 | `rum-meter: /dev/null: not a regular file\n` |
 | `--prices` | count | Het prijzenpad is een apparaat (Linux en macOS). | `count --prices /dev/null tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: /dev/null: not a regular file\n` |

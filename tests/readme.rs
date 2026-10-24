@@ -197,6 +197,14 @@ fn readme_has_the_sections_and_names() {
     }
     assert!(section(&readme, "## Why").contains("Willingness to pay was not investigated"));
     assert!(section(&readme, "## Why").contains("7 October 2026"));
+    assert!(
+        section(&readme, "## Why").contains("not a confirmed complaint"),
+        "Why should not read as a proven pain point"
+    );
+    assert!(
+        section(&readme, "## Quick start").contains("not a pipe or stdin"),
+        "Quick start should warn about the pipe/stdin limitation up front"
+    );
     assert!(section(&readme, "## License").contains("PEPAI"));
     assert!(section(&readme, "## License").contains("at your option"));
     assert!(section(&readme, "## Contact").contains("pep_ai@icloud.com"));
@@ -482,6 +490,7 @@ fn reference_describes_rules_and_price_errors() {
         "`price file has no tiers`",
         "`tier is not an object`",
         "`tier name is empty`",
+        "`duplicate tier name`",
         "`invalid price file`",
         "`currency is empty`",
         "`monthly cost overflows`",

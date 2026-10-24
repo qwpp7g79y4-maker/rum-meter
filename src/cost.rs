@@ -1,6 +1,7 @@
 //! Tier prices from a user-supplied JSON file, and the monthly estimate.
 //!
 //! Shape: `{ "currency": "...", "tiers": [ { "name": "...", "price_per_rum_hour": n } ] }`.
+//! Tier names are unique; a repeated name is [`PriceError::DuplicateTierName`].
 //! `price_per_rum_hour` is the exact decimal from the JSON number, not a binary
 //! float. A month is RUM × price per RUM-hour × hours (730 unless the caller
 //! passes another value), rounded half away from zero to two decimal places.
@@ -143,6 +144,10 @@ pub enum PriceError {
     DuplicateKey {
         path: PathBuf,
     },
+    /// Two tiers share a `name`. Nothing from either tier is printed.
+    DuplicateTierName {
+        path: PathBuf,
+    },
     NegativePrice {
         path: PathBuf,
     },
@@ -167,6 +172,7 @@ enum ParseError {
     EmptyTierName,
     TierNotObject,
     DuplicateKey,
+    DuplicateTierName,
     NegativePrice,
     NonNumericPrice,
     EmptyCurrency,
@@ -183,6 +189,7 @@ impl ParseError {
             Self::EmptyTierName => PriceError::EmptyTierName { path },
             Self::TierNotObject => PriceError::TierNotObject { path },
             Self::DuplicateKey => PriceError::DuplicateKey { path },
+            Self::DuplicateTierName => PriceError::DuplicateTierName { path },
             Self::NegativePrice => PriceError::NegativePrice { path },
             Self::NonNumericPrice => PriceError::NonNumericPrice { path },
             Self::EmptyCurrency => PriceError::EmptyCurrency { path },
@@ -250,6 +257,13 @@ impl fmt::Display for PriceError {
                 write!(
                     f,
                     "rum-meter: {}: duplicate key in a tier",
+                    crate::rum::escape_controls(&path.display().to_string())
+                )
+            }
+            Self::DuplicateTierName { path } => {
+                write!(
+                    f,
+                    "rum-meter: {}: duplicate tier name",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
@@ -360,8 +374,13 @@ fn parse_bytes(bytes: &[u8]) -> Result<PriceList, ParseError> {
         return Err(ParseError::NoTiers);
     }
     let mut parsed = Vec::with_capacity(tiers.len());
+    let mut seen_names = std::collections::HashSet::with_capacity(tiers.len());
     for tier in &tiers {
-        parsed.push(parse_tier(tier)?);
+        let tier = parse_tier(tier)?;
+        if !seen_names.insert(tier.name.clone()) {
+            return Err(ParseError::DuplicateTierName);
+        }
+        parsed.push(tier);
     }
     Ok(PriceList {
         currency,
@@ -748,6 +767,17 @@ mod tests {
             assert!(!err.to_string().contains("999"));
             assert!(!err.to_string().contains("CANARY"));
         }
+    }
+
+    #[test]
+    fn duplicate_tier_name_is_rejected() {
+        let err = load_body(
+            "dup-tier-name.json",
+            r#"{"currency":"EUR","tiers":[{"name":"a","price_per_rum_hour":1},{"name":"a","price_per_rum_hour":2}]}"#,
+        )
+        .unwrap_err();
+        assert!(matches!(err, PriceError::DuplicateTierName { .. }));
+        assert!(err.to_string().ends_with("duplicate tier name"));
     }
 
     #[test]

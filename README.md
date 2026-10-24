@@ -12,7 +12,7 @@ rum-meter is a command-line tool written in Rust. It reads `terraform.tfstate` f
 
 ## Why
 
-HCP Terraform bills per RUM. A team sees that count on the billing page afterwards, without a per-resource explanation. rum-meter shows, beforehand and on your machine, how much RUM a state has, which module and type it sits in, and what a change adds or removes. Willingness to pay was not investigated. The HashiCorp sentences this follows were checked on 7 October 2026 and are quoted under [Compared with alternatives](#compared-with-alternatives).
+HCP Terraform bills per RUM. A team sees that count on the billing page afterwards, without a per-resource explanation. rum-meter shows, beforehand and on your machine, how much RUM a state has, which module and type it sits in, and what a change adds or removes. This is a plausible scenario, not a confirmed complaint: no verified report of a team disputing an HCP Terraform RUM bill was found. Willingness to pay was not investigated. The HashiCorp sentences this follows were checked on 7 October 2026 and are quoted under [Compared with alternatives](#compared-with-alternatives).
 
 ## Installation
 
@@ -42,6 +42,39 @@ From a local clone: `cargo install --locked --path .`, or `cargo build --release
 The binaries are built and smoke-tested on GitHub runners (Ubuntu, macOS on Apple Silicon and Intel, Windows). Building from source needs Rust 1.85 or newer on any platform Rust supports.
 
 ## Quick start
+
+A state argument `-` reads stdin. Any other state path is a file path, not a pipe or stdin (see [Limitations](#limitations)).
+
+This block needs no file from this repository. Copied into any directory, with `rum-meter` on `PATH`, it prints the report below.
+
+```sh
+cat <<'EOF' | rum-meter count -
+{
+  "version": 4,
+  "resources": [
+    {
+      "mode": "managed",
+      "type": "random_id",
+      "name": "one",
+      "instances": [{}]
+    }
+  ]
+}
+EOF
+```
+
+```text
+file: -
+rum: 1
+not counted: R2 0, R3 0, R4 0
+total rum: 1
+not counted: R2 0, R3 0, R4 0
+modules:
+  (root): 1
+types:
+  random_id: 1
+estimate: HCP Terraform bills the hourly peak; this is a single snapshot
+```
 
 These are the real outputs of the binary on the synthetic fixtures in `tests/fixtures`. A test runs every example and compares the output.
 
@@ -263,13 +296,13 @@ The billing page shows the count afterwards. rum-meter reads a file you already 
 - A state should contain each address once. If an address appears twice, at the root, in a module, with count or for_each, or as a deposed object, rum-meter does not count that state: exit 2, with the address and the reason, without attribute values. The same rule applies when `count` is given several files: the file that repeats an address is exit 2, and the totals are not printed. On `diff`, added and removed therefore still add up to the RUM delta.
 - rum-meter reads UTF-8, for state files and price files. A UTF-8 BOM at the start of the file is skipped. A UTF-16 or UTF-32 file, with or without a BOM, such as Windows PowerShell 5.1 writes on a redirect, is not converted. That is exit 2, with the message that the file is UTF-16 (or UTF-32) and must be saved as UTF-8, for example with `iconv -f UTF-16 -t UTF-8` or in PowerShell with `Out-File -Encoding utf8`. CRLF line ends are fine.
 - A file name that is not valid UTF-8 (possible on Linux) is read, but shown in the report with U+FFFD for the invalid bytes.
-- rum-meter reads only regular files, so not a pipe or process substitution. A directory, a FIFO or a device is refused with exit 2 before any byte is read. A symlink to a FIFO is refused the same way. The open does not wait, and the type is taken from the opened file, so a path that becomes a FIFO is not read and does not hang. A symlink to a regular file is read.
+- rum-meter reads only regular files, so not a pipe or process substitution. A directory, a FIFO or a device is refused with exit 2 before any byte is read. A symlink to a FIFO is refused the same way. The open does not wait, and the type is taken from the opened file, so a path that becomes a FIFO is not read and does not hang. A symlink to a regular file is read. The state argument `-` is the exception: stdin is read to the end when it is a pipe or a regular file. A terminal or a device on stdin is `not a regular file`, and nothing is read.
 
 Where the fixtures come from: [tests/fixtures/README.md](tests/fixtures/README.md).
 
 ## Privacy
 
-rum-meter is fully offline: no network, no API key, no telemetry. The binary reads only the paths you pass. Output contains addresses, module paths, types, rule codes and counts. Attribute values, sensitive values, private data and outputs are left out. `tests/safety.rs` guards that with synthetic fixtures. No error message contains bytes from the file, only the path, the line and column of a parse error, and the kind of error.
+rum-meter is fully offline: no network, no API key, no telemetry. The binary reads only the paths you pass, or stdin when a state path is `-`. Output contains addresses, module paths, types, rule codes and counts. Attribute values, sensitive values, private data and outputs are left out. `tests/safety.rs` guards that with synthetic fixtures. No error message contains bytes from the file, only the path, the line and column of a parse error, and the kind of error.
 
 ## Support
 

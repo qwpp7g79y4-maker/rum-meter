@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::ffi::OsString;
 use std::fmt;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
@@ -67,25 +68,30 @@ enum Commands {
     /// Count billable RUM in one or more state files
     #[command(after_help = USAGE_HELP)]
     Count {
-        /// State file
+        /// State file, or - to read stdin
         #[arg(value_name = "STATE", required = true, num_args = 1..)]
         states: Vec<PathBuf>,
     },
     /// Compare billable RUM in two state files
     #[command(after_help = USAGE_HELP)]
     Diff {
-        /// Earlier state file
+        /// Earlier state file, or - to read stdin
         #[arg(value_name = "OLD")]
         old: PathBuf,
-        /// Later state file
+        /// Later state file, or - to read stdin
         #[arg(value_name = "NEW")]
         new: PathBuf,
     },
 }
 
+/// Clap rejects a bare `-`. Rewrite only that token, and not the value of an
+/// option, so `count file --prices prices.json` still sees the flag.
+const STDIN_SENTINEL: &str = "\u{0}";
+
 fn main() -> ExitCode {
-    match Cli::try_parse() {
-        Ok(cli) => {
+    match Cli::try_parse_from(normalize_stdin_args()) {
+        Ok(mut cli) => {
+            restore_stdin_paths(&mut cli);
             if let Some(message) = refused_option(&cli) {
                 write_stderr_line(message);
                 return ExitCode::from(3);
@@ -100,6 +106,49 @@ fn main() -> ExitCode {
             }
         }
         Err(err) => clap_exit(err),
+    }
+}
+
+fn normalize_stdin_args() -> Vec<OsString> {
+    const TAKES_VALUE: &[&str] = &[
+        "--prices",
+        "--top",
+        "--hours-per-month",
+        "--max-rum",
+        "--max-increase",
+    ];
+    let mut args: Vec<OsString> = std::env::args_os().collect();
+    let mut index = 0;
+    while index < args.len() {
+        let text = args[index].to_string_lossy();
+        if TAKES_VALUE.contains(&text.as_ref()) {
+            index += 2;
+            continue;
+        }
+        if text == "-" {
+            args[index] = OsString::from(STDIN_SENTINEL);
+        }
+        index += 1;
+    }
+    args
+}
+
+fn restore_stdin_paths(cli: &mut Cli) {
+    let restore = |path: &mut PathBuf| {
+        if path.as_os_str() == STDIN_SENTINEL {
+            *path = PathBuf::from("-");
+        }
+    };
+    match &mut cli.command {
+        Commands::Count { states } => {
+            for path in states {
+                restore(path);
+            }
+        }
+        Commands::Diff { old, new } => {
+            restore(old);
+            restore(new);
+        }
     }
 }
 

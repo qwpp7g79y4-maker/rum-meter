@@ -22,6 +22,10 @@ Synthetic empty file, 0 bytes, written by hand. `count` exits 2: invalid JSON at
 
 Synthetic price file, written by hand. It is not a state and not a HashiCorp rate. Two made-up tiers in EUR: `example-a` at 1 per RUM-hour and `example-b` at 0.5 per RUM-hour. The `note` is Dutch. The tool ignores `note` and does not print it.
 
+## dup-tier-prices.json
+
+Synthetic price file, written by hand. It is not a state and not a HashiCorp rate. Two tiers both named `dup`, at 1 and 2 per RUM-hour, in EUR. `count --prices` on this file exits 2: duplicate tier name.
+
 ## v4_canary_new.json
 
 Synthetic state v4, written by hand. Resources: managed `random_id.kept` with index 0 and 1, data `local_file.note`, managed `null_resource.wait` with index 0, and managed `random_id.absent` in `module.child.module.nested` with 0 instances. Each present instance has `attributes`, `sensitive_attributes` and `private`, and there is an output. The identity fields do not hold the marker. Each file covers `count`, `--explain` and `--json` in the safety test. Counted together they share `random_id.kept[0]`, so that command is a duplicate address. `diff` still compares the two files.

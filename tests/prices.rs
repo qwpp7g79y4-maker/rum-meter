@@ -43,3 +43,24 @@ fn invalid_price_file_exits_2() {
     assert_eq!(stderr, format!("rum-meter: {prices}: currency is empty\n"));
     assert!(!stderr.contains("CANARY-SECRET-PR-PRICES"));
 }
+
+#[test]
+fn duplicate_tier_name_exits_2_and_does_not_print_a_cost() {
+    let prices = fixture("dup-tier-prices.json");
+    let state = fixture("v4_one_managed.json");
+    let output = run(&["count", &state, "--prices", &prices]);
+    assert_eq!(
+        output.status.code(),
+        Some(2),
+        "a price file with two tiers named the same should exit 2"
+    );
+    assert!(
+        output.stdout.is_empty(),
+        "stdout should be empty on an input error"
+    );
+    let stderr = String::from_utf8(output.stderr).expect("stderr is utf-8");
+    assert_eq!(
+        stderr,
+        format!("rum-meter: {prices}: duplicate tier name\n")
+    );
+}
