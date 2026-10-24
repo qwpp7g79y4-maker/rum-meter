@@ -2,6 +2,35 @@
 
 This page shows how each release of rum-meter was checked before it was published, what we found, and what we fixed. It describes checks we did. It is not a guarantee that the software is free of bugs or secure.
 
+## v0.1.2
+
+| | |
+|---|---|
+| Version | 0.1.2 ([release](https://github.com/qwpp7g79y4-maker/rum-meter/releases/tag/v0.1.2), [crates.io](https://crates.io/crates/rum-meter/0.1.2)) |
+| Commit checked | [`c827e43`](https://github.com/qwpp7g79y4-maker/rum-meter/commit/c827e43) |
+| Date | 2026-10-24 |
+| Tests | 205 automated tests, run in debug and release mode |
+
+### How we checked
+
+- The same checks as for the previous version (below), on every platform.
+- Automated tests in CI on Linux, Windows, macOS on Apple Silicon and Intel, and Rust 1.85, plus `cargo audit` (no known vulnerabilities) and `cargo deny check licenses` (ok).
+- `cargo clippy --all-targets` and `cargo fmt --check` clean, on debug and release test runs.
+- A `cargo-fuzz` harness (`fuzz/`) with one target per untrusted-input stage (state parsing, price-tier parsing, cost calculation, `diff`, rendering), run as a nightly CI job.
+
+### What we found and fixed
+
+| Problem | Fix |
+|---|---|
+| `diff` matched objects on the printed address, so a resource named `a[0]` and resource `a` at index 0 looked like no change | Matches on module, mode, type, name, index key and deposed key instead |
+| A price file with two tiers of the same name was accepted | Exit 2, `duplicate tier name`, no cost printed |
+| A repeated key inside one price tier was reported as `tier is not an object` | It is `duplicate key in a tier` |
+| Text output did not escape U+2028/U+2029, so an address, path, module, type or price label carrying one of these could fake an extra line in a report | Escaped the same way as other invisible/bidirectional format characters |
+| `docs/reference.md` and `docs/reference.nl.md` named a stale `--version` string (`rum-meter 0.1.0`) | Now follow the crate version; a test pins `--version` to it |
+| The Windows `extern` block was not `unsafe`, so the crate did not build on edition 2024 | Marked `unsafe` |
+
+All fixes are listed in the [changelog](https://github.com/qwpp7g79y4-maker/rum-meter/blob/main/CHANGELOG.md).
+
 ## v0.1.1
 
 | | |

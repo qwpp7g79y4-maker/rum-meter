@@ -2,6 +2,35 @@
 
 Deze pagina laat zien hoe elke release van rum-meter is gecontroleerd voordat hij online kwam, wat we vonden en wat we hebben opgelost. Het beschrijft onze controles. Het is geen garantie dat de software foutloos of veilig is.
 
+## v0.1.2
+
+| | |
+|---|---|
+| Versie | 0.1.2 ([release](https://github.com/qwpp7g79y4-maker/rum-meter/releases/tag/v0.1.2), [crates.io](https://crates.io/crates/rum-meter/0.1.2)) |
+| Gecontroleerde commit | [`c827e43`](https://github.com/qwpp7g79y4-maker/rum-meter/commit/c827e43) |
+| Datum | 2026-10-24 |
+| Tests | 205 automatische tests, gedraaid in debug- en releasemodus |
+
+### Hoe we controleerden
+
+- Dezelfde controles als bij de vorige versie (hieronder), op elk platform.
+- Geautomatiseerde tests in CI op Linux, Windows, macOS op Apple Silicon en Intel, en Rust 1.85, plus `cargo audit` (geen bekende kwetsbaarheden) en `cargo deny check licenses` (ok).
+- `cargo clippy --all-targets` en `cargo fmt --check` schoon, op debug- en release-testruns.
+- Een `cargo-fuzz`-harness (`fuzz/`) met één doel per onbetrouwbare-invoerstap (state parsen, prijstier parsen, kostenberekening, `diff`, weergave), die als nachtelijke CI-job draait.
+
+### Wat we vonden en oplosten
+
+| Probleem | Oplossing |
+|---|---|
+| `diff` matchte objecten op het afgedrukte adres, waardoor een resource met de naam `a[0]` en resource `a` op index 0 als geen wijziging leken | Matcht nu op module, mode, type, naam, indexsleutel en deposed-sleutel |
+| Een prijsbestand met twee tiers met dezelfde naam werd geaccepteerd | Exit 2, `duplicate tier name`, geen kosten afgedrukt |
+| Een herhaalde sleutel binnen één prijstier werd gemeld als `tier is not an object` | Het is `duplicate key in a tier` |
+| Tekstuitvoer escapete U+2028/U+2029 niet, waardoor een adres, pad, module, type of prijslabel met zo'n teken een extra regel in een rapport kon voorwenden | Ge-escaped op dezelfde manier als andere onzichtbare/bidirectionele tekens |
+| `docs/reference.md` en `docs/reference.nl.md` noemden een verouderde `--version`-tekst (`rum-meter 0.1.0`) | Volgt nu de crateversie; een test pint `--version` daarop |
+| Het Windows-`extern`-blok was niet `unsafe`, waardoor de crate niet bouwde op edition 2024 | Gemarkeerd als `unsafe` |
+
+Alle fixes staan in de [changelog](https://github.com/qwpp7g79y4-maker/rum-meter/blob/main/CHANGELOG.md).
+
 ## v0.1.1
 
 | | |
