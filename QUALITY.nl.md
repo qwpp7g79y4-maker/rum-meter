@@ -16,7 +16,7 @@ Deze pagina laat zien hoe elke release van rum-meter is gecontroleerd voordat hi
 - Dezelfde controles als bij de vorige versie (hieronder), op elk platform.
 - Geautomatiseerde tests in CI op Linux, Windows, macOS op Apple Silicon en Intel, en Rust 1.85, plus `cargo audit` (geen bekende kwetsbaarheden) en `cargo deny check licenses` (ok).
 - `cargo clippy --all-targets` en `cargo fmt --check` schoon, op debug- en release-testruns.
-- Een `cargo-fuzz`-harness (`fuzz/`) met één doel per onbetrouwbare-invoerstap (state parsen, prijstier parsen, kostenberekening, `diff`, weergave), die als nachtelijke CI-job draait.
+- Een `cargo-fuzz`-harness (`fuzz/`) met één doel per onbetrouwbare-invoerstap (state parsen, prijstier parsen, kostenberekening, `diff`, weergave); CI bouwt deze doelen alleen bij elke push en pull request (`.github/workflows/ci.yml:76-88`), voert ze niet uit, en er is geen periodieke (nachtelijke) trigger.
 
 ### Wat we vonden en oplosten
 

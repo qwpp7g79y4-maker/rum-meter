@@ -16,7 +16,7 @@ This page shows how each release of rum-meter was checked before it was publishe
 - The same checks as for the previous version (below), on every platform.
 - Automated tests in CI on Linux, Windows, macOS on Apple Silicon and Intel, and Rust 1.85, plus `cargo audit` (no known vulnerabilities) and `cargo deny check licenses` (ok).
 - `cargo clippy --all-targets` and `cargo fmt --check` clean, on debug and release test runs.
-- A `cargo-fuzz` harness (`fuzz/`) with one target per untrusted-input stage (state parsing, price-tier parsing, cost calculation, `diff`, rendering), run as a nightly CI job.
+- A `cargo-fuzz` harness (`fuzz/`) with one target per untrusted-input stage (state parsing, price-tier parsing, cost calculation, `diff`, rendering); CI only builds these targets on every push and pull request (`.github/workflows/ci.yml:76-88`), it does not run them, and there is no scheduled (nightly) trigger.
 
 ### What we found and fixed
 
