@@ -1,5 +1,6 @@
 //! The state path `-` reads stdin. A real path is still a regular file only.
 
+#[cfg(unix)]
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
