@@ -7,9 +7,9 @@ Deze pagina laat zien hoe elke release van rum-meter is gecontroleerd voordat hi
 | | |
 |---|---|
 | Versie | 0.1.2 ([release](https://github.com/qwpp7g79y4-maker/rum-meter/releases/tag/v0.1.2), [crates.io](https://crates.io/crates/rum-meter/0.1.2)) |
-| Gecontroleerde commit | [`c827e43`](https://github.com/qwpp7g79y4-maker/rum-meter/commit/c827e43) |
-| Datum | 2026-10-24 |
-| Tests | 205 automatische tests, gedraaid in debug- en releasemodus |
+| Gecontroleerde commit | [`adc53d2`](https://github.com/qwpp7g79y4-maker/rum-meter/commit/adc53d2) |
+| Datum | 2026-10-25 |
+| Tests | 223 automatische tests, gedraaid in debug- en releasemodus |
 
 ### Hoe we controleerden
 
@@ -28,6 +28,11 @@ Deze pagina laat zien hoe elke release van rum-meter is gecontroleerd voordat hi
 | Tekstuitvoer escapete U+2028/U+2029 niet, waardoor een adres, pad, module, type of prijslabel met zo'n teken een extra regel in een rapport kon voorwenden | Ge-escaped op dezelfde manier als andere onzichtbare/bidirectionele tekens |
 | `docs/reference.md` en `docs/reference.nl.md` noemden een verouderde `--version`-tekst (`rum-meter 0.1.0`) | Volgt nu de crateversie; een test pint `--version` daarop |
 | Het Windows-`extern`-blok was niet `unsafe`, waardoor de crate niet bouwde op edition 2024 | Gemarkeerd als `unsafe` |
+| Een `currency` in een prijsbestand langer dan 16 tekens, of buiten zichtbare ASCII, werd op elke tier-regel gekopieerd voordat iets dat afwees | Geweigerd bij het laden, voor er een kopie bestaat |
+| Een state kon een gedeeld resource-label (module, mode, type of naam) over te veel instanties herhalen voordat classificatie dat opving | Direct geweigerd, voor classificatie |
+| De logische grootte van een sparse bestand, niet de echte inhoud, bepaalde hoeveel van een state-, prijs- of stdin-lezing werd toegewezen en gelezen voordat de JSON-parser kon falen | Lezen stopt zodra het lopende totaal de cap van 128 MiB zou overschrijden |
+| Het gedeelde labelbudget van 32 MiB van `count` werd per bestand gecontroleerd, zodat meerdere bestanden elk net onder het budget, of één herhaald pad, erdoorheen glipten | Budget is een lopend totaal over de hele aanroep; een herhaald pad wordt geweigerd voor enig bestand opent |
+| `mode` werd door `classify` op elke instantie gekopieerd voordat het meetelde in het gedeelde labelbudget | Telt nu eerst mee in het budget |
 
 Alle fixes staan in de [changelog](https://github.com/qwpp7g79y4-maker/rum-meter/blob/main/CHANGELOG.md).
 

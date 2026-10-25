@@ -2,10 +2,15 @@
 
 All notable changes to this project are documented in this file.
 
-## [0.1.2] - 2026-10-24
+## [0.1.2] - 2026-10-25
 
 ### Fixed
 
+- `count`'s 32 MiB shared label budget is a running total across every file in the invocation, not a per-file check. Several files each just under the budget, or one path repeated many times, no longer slip the module/mode/type/name copies through before the duplicate-address check can reject them. A repeated path is rejected before any file in the list is opened.
+- `mode` is counted in the shared label budget before `classify` copies it onto each instance, closing a gap the earlier per-file budget left open.
+- A state that repeats a shared resource label (module, mode, type or name) across too many instances is rejected instead of let through to classification.
+- State, price and stdin reads stop as soon as the running total would exceed the 128 MiB cap, instead of trusting the file's logical size. A sparse file that reports a huge logical size while using no disk blocks no longer forces a read of that whole size before the JSON parser can fail.
+- A price-file `currency` longer than 16 characters, or containing a character outside visible ASCII (U+0021 through U+007E), is refused at load, before it is copied onto every tier line.
 - `diff` matches objects on module, mode, type, name, index key and deposed key, not on the printed address. A resource named `a[0]` and resource `a` at index 0 are now one removal and one addition instead of no change.
 - A price file with two tiers of the same name is exit 2, `duplicate tier name`, and prints no cost.
 - When a real module or type is named `other`, `--top` no longer prints two indistinguishable `other` rows. The remainder is `(other)`, or `(other N)` when several rows are folded together, so the names stay unique.

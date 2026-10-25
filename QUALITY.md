@@ -7,9 +7,9 @@ This page shows how each release of rum-meter was checked before it was publishe
 | | |
 |---|---|
 | Version | 0.1.2 ([release](https://github.com/qwpp7g79y4-maker/rum-meter/releases/tag/v0.1.2), [crates.io](https://crates.io/crates/rum-meter/0.1.2)) |
-| Commit checked | [`c827e43`](https://github.com/qwpp7g79y4-maker/rum-meter/commit/c827e43) |
-| Date | 2026-10-24 |
-| Tests | 205 automated tests, run in debug and release mode |
+| Commit checked | [`adc53d2`](https://github.com/qwpp7g79y4-maker/rum-meter/commit/adc53d2) |
+| Date | 2026-10-25 |
+| Tests | 223 automated tests, run in debug and release mode |
 
 ### How we checked
 
@@ -28,6 +28,11 @@ This page shows how each release of rum-meter was checked before it was publishe
 | Text output did not escape U+2028/U+2029, so an address, path, module, type or price label carrying one of these could fake an extra line in a report | Escaped the same way as other invisible/bidirectional format characters |
 | `docs/reference.md` and `docs/reference.nl.md` named a stale `--version` string (`rum-meter 0.1.0`) | Now follow the crate version; a test pins `--version` to it |
 | The Windows `extern` block was not `unsafe`, so the crate did not build on edition 2024 | Marked `unsafe` |
+| A price-file `currency` longer than 16 characters, or outside visible ASCII, was copied onto every tier line before anything rejected it | Refused at load, before any copy exists |
+| A state could repeat a shared resource label (module, mode, type or name) across too many instances before classification caught it | Rejected up front, before classification |
+| A sparse file's logical size, not its real content, drove how much of a state, price or stdin read would be allocated and read before the JSON parser could fail | Reads stop as soon as the running total would exceed the 128 MiB cap |
+| `count`'s 32 MiB shared label budget was checked once per file, so several files each just under the budget, or one repeated path, slipped through | Budget is a running total across the whole invocation; a repeated path is rejected before any file opens |
+| `mode` was copied onto each instance by `classify` before it was counted against the shared label budget | Counted in the budget first |
 
 All fixes are listed in the [changelog](https://github.com/qwpp7g79y4-maker/rum-meter/blob/main/CHANGELOG.md).
 
