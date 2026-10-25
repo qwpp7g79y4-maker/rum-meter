@@ -86,7 +86,7 @@ pub struct Verdict {
 ///
 /// The caller must have rejected [`shared_label_product`] over
 /// [`MAX_SHARED_LABEL_PRODUCT`]. Building `address` and `identity` copies
-/// module, type and name once per instance.
+/// module, mode, type and name once per instance.
 pub fn classify(state: &State) -> Vec<Verdict> {
     let mut verdicts = Vec::new();
     for resource in &state.resources {
@@ -102,11 +102,12 @@ pub fn classify(state: &State) -> Vec<Verdict> {
     verdicts
 }
 
-/// Bytes that `classify` would copy once per instance: module, type and name
-/// are stored once on the resource and repeated into every verdict.
+/// Bytes that `classify` would copy once per instance: module, mode, type
+/// and name are stored once on the resource and repeated into every verdict.
 pub const MAX_SHARED_LABEL_PRODUCT: usize = 32 * 1024 * 1024;
 
-/// Sum of each resource's module, type and name length times its instance count.
+/// Sum of each resource's module, mode, type and name length times its
+/// instance count.
 ///
 /// A block with no instances still counts as one, because `classify` builds
 /// one verdict for it.
@@ -118,6 +119,7 @@ pub fn shared_label_product(state: &State) -> usize {
             .as_ref()
             .map(String::len)
             .unwrap_or(0)
+            .saturating_add(resource.mode.len())
             .saturating_add(resource.resource_type.len())
             .saturating_add(resource.name.len());
         let n = resource.instances.len().max(1);
@@ -797,5 +799,28 @@ mod tests {
         };
         assert!(shared_label_product(&short) < MAX_SHARED_LABEL_PRODUCT);
         assert_eq!(total_rum(&classify(&short)), 2500);
+    }
+
+    #[test]
+    fn long_shared_mode_is_over_budget_without_copying() {
+        let state = State {
+            version: 4,
+            resources: vec![Resource {
+                mode: "a".repeat(80_000),
+                resource_type: "t".into(),
+                name: "n".into(),
+                module: None,
+                instances: (0..2500)
+                    .map(|i| Instance {
+                        index_key: Some(IndexKey::Number(i)),
+                        deposed: None,
+                        tainted: false,
+                    })
+                    .collect(),
+            }],
+        };
+        let start = std::time::Instant::now();
+        assert!(shared_label_product(&state) > MAX_SHARED_LABEL_PRODUCT);
+        assert!(start.elapsed() < std::time::Duration::from_millis(200));
     }
 }

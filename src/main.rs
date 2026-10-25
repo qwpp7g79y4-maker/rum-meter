@@ -228,7 +228,7 @@ impl fmt::Display for CliError {
     }
 }
 
-/// Shared module, type and name are copied once per instance inside `classify`.
+/// Shared module, mode, type and name are copied once per instance inside `classify`.
 /// Reject the product before that copy. The label text stays out of the message.
 fn reject_shared_labels(path: &Path, state: &rum_meter::state::State) -> Result<(), CliError> {
     if rum_meter::rum::shared_label_product(state) > rum_meter::rum::MAX_SHARED_LABEL_PRODUCT {
