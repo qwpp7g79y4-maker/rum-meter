@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.1.3] - 2026-10-25
+
+### Fixed
+
+- A state file, price file or redirected stdin whose size is already over the 128 MiB cap is refused from its metadata before any byte is read. 0.1.2 read up to 128 MiB of a sparse file's zeros before refusing, which took about 9 seconds on a macOS Intel CI runner. The capped read loop stays for pipes and for files that grow after the size check.
+- The sparse-file tests no longer time the refusal. A unit test counts the bytes the reader hands out and requires zero for a known size over the cap.
+
 ## [0.1.2] - 2026-10-25
 
 ### Fixed
