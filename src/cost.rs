@@ -131,6 +131,10 @@ pub enum PriceError {
     NotRegular {
         path: PathBuf,
     },
+    /// More than [`crate::regular::MAX_INPUT_BYTES`] were read. Nothing was parsed.
+    TooLarge {
+        path: PathBuf,
+    },
     InvalidJson {
         path: PathBuf,
         line: usize,
@@ -235,6 +239,14 @@ impl fmt::Display for PriceError {
                     f,
                     "rum-meter: {}: not a regular file",
                     crate::rum::escape_controls(&path.display().to_string())
+                )
+            }
+            Self::TooLarge { path } => {
+                write!(
+                    f,
+                    "rum-meter: {}: file is larger than {} MiB",
+                    crate::rum::escape_controls(&path.display().to_string()),
+                    crate::regular::MAX_INPUT_BYTES / (1024 * 1024)
                 )
             }
             Self::InvalidJson { path, line, column } => {
@@ -639,6 +651,9 @@ fn parse_price(raw: &str) -> Result<BigDecimal, ParseError> {
 fn read_error(path: &Path, err: crate::regular::RegularError) -> PriceError {
     match err {
         crate::regular::RegularError::NotRegular => PriceError::NotRegular {
+            path: path.to_path_buf(),
+        },
+        crate::regular::RegularError::TooLarge => PriceError::TooLarge {
             path: path.to_path_buf(),
         },
         crate::regular::RegularError::Unreadable { kind } => PriceError::Unreadable {

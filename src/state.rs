@@ -98,6 +98,10 @@ pub enum LoadError {
     NotRegular {
         path: PathBuf,
     },
+    /// More than [`crate::regular::MAX_INPUT_BYTES`] were read. Nothing was parsed.
+    TooLarge {
+        path: PathBuf,
+    },
     InvalidJson {
         path: PathBuf,
         line: usize,
@@ -165,6 +169,14 @@ impl fmt::Display for LoadError {
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
+            Self::TooLarge { path } => {
+                write!(
+                    f,
+                    "rum-meter: {}: file is larger than {} MiB",
+                    crate::rum::escape_controls(&path.display().to_string()),
+                    crate::regular::MAX_INPUT_BYTES / (1024 * 1024)
+                )
+            }
             Self::InvalidJson { path, line, column } => {
                 write!(
                     f,
@@ -203,8 +215,9 @@ impl std::error::Error for LoadError {}
 /// for JSON the line and column. It never includes bytes from the file.
 ///
 /// A path that is not a regular file is refused without reading a byte.
-/// The path `-` reads stdin instead: a pipe or a regular file, to the end.
-/// A terminal or a device on stdin is refused without reading a byte.
+/// The path `-` reads stdin instead: a pipe or a regular file, up to
+/// [`crate::regular::MAX_INPUT_BYTES`]. A terminal or a device on stdin is
+/// refused without reading a byte.
 pub fn load_state(path: &Path) -> Result<State, LoadError> {
     let bytes = if path == Path::new("-") {
         crate::regular::read_stdin().map_err(|err| read_error(path, err))?
@@ -264,6 +277,9 @@ fn json_root_is_array(bytes: &[u8]) -> bool {
 fn read_error(path: &Path, err: crate::regular::RegularError) -> LoadError {
     match err {
         crate::regular::RegularError::NotRegular => LoadError::NotRegular {
+            path: path.to_path_buf(),
+        },
+        crate::regular::RegularError::TooLarge => LoadError::TooLarge {
             path: path.to_path_buf(),
         },
         crate::regular::RegularError::Unreadable { kind } => LoadError::Unreadable {

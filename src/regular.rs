@@ -7,6 +7,10 @@
 //! followed and read. A path that becomes a FIFO between the name and the
 //! open cannot block: the open returns, and the descriptor is not a regular
 //! file.
+//!
+//! Reading stops as soon as the total would exceed [`MAX_INPUT_BYTES`], so a
+//! sparse file or an unbounded pipe cannot be read past that cap no matter
+//! what its reported logical size is.
 
 use std::fs::{self, File};
 use std::io::{self, ErrorKind, Read};
@@ -14,19 +18,40 @@ use std::path::Path;
 
 #[derive(Debug)]
 pub(crate) enum RegularError {
-    Unreadable { kind: &'static str },
+    Unreadable {
+        kind: &'static str,
+    },
     NotRegular,
+    /// More than [`MAX_INPUT_BYTES`] were read. Nothing further was read.
+    TooLarge,
 }
+
+/// Logical size is not a bound: a sparse file reports its full logical size
+/// in `stat` while using no disk blocks, so the cap is enforced on the bytes
+/// actually read, one chunk at a time, rather than trusted from metadata.
+pub(crate) const MAX_INPUT_BYTES: u64 = 128 * 1024 * 1024;
 
 /// Bytes of a regular file. Nothing is read when the opened file is not one.
 pub(crate) fn read_regular(path: &Path) -> Result<Vec<u8>, RegularError> {
-    let mut file = open_regular(path)?;
+    let file = open_regular(path)?;
+    read_capped(file)
+}
+
+/// Read until EOF or until the total would exceed [`MAX_INPUT_BYTES`], in which
+/// case nothing more is read and the bytes collected so far are discarded.
+fn read_capped(mut reader: impl Read) -> Result<Vec<u8>, RegularError> {
     let mut bytes = Vec::new();
-    file.read_to_end(&mut bytes)
-        .map_err(|err| RegularError::Unreadable {
-            kind: io_kind_label(err.kind()),
-        })?;
-    Ok(bytes)
+    let mut buf = [0u8; 64 * 1024];
+    loop {
+        let n = reader.read(&mut buf).map_err(unreadable)?;
+        if n == 0 {
+            return Ok(bytes);
+        }
+        if bytes.len() as u64 + n as u64 > MAX_INPUT_BYTES {
+            return Err(RegularError::TooLarge);
+        }
+        bytes.extend_from_slice(&buf[..n]);
+    }
 }
 
 /// Open for reading, and keep the file only when the opened descriptor is a
@@ -79,22 +104,15 @@ fn open_regular(path: &Path) -> Result<File, RegularError> {
 
 /// Bytes from stdin for the state path `-`.
 ///
-/// A pipe or a regular file is read to the end. A terminal, a device, or any
-/// other kind is [`RegularError::NotRegular`] and nothing is read. A path that
-/// is a FIFO is still refused by [`read_regular`]; this function is only for
-/// the literal argument `-`.
+/// A pipe or a regular file is read up to [`MAX_INPUT_BYTES`]. A terminal, a
+/// device, or any other kind is [`RegularError::NotRegular`] and nothing is
+/// read. A path that is a FIFO is still refused by [`read_regular`]; this
+/// function is only for the literal argument `-`.
 pub(crate) fn read_stdin() -> Result<Vec<u8>, RegularError> {
     if !stdin_is_pipe_or_file()? {
         return Err(RegularError::NotRegular);
     }
-    let mut bytes = Vec::new();
-    io::stdin()
-        .lock()
-        .read_to_end(&mut bytes)
-        .map_err(|err| RegularError::Unreadable {
-            kind: io_kind_label(err.kind()),
-        })?;
-    Ok(bytes)
+    read_capped(io::stdin().lock())
 }
 
 /// `true` when stdin is a pipe or a regular file. A character device is `false`.
