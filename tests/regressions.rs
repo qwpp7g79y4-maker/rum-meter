@@ -358,6 +358,6 @@ fn same_file_twice_is_not_counted_twice() {
     assert!(output.stdout.is_empty());
     assert_eq!(
         String::from_utf8(output.stderr).unwrap(),
-        "rum-meter: a.json: duplicate address random_id.x\n"
+        "rum-meter: a.json: state file is given more than once\n"
     );
 }

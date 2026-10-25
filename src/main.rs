@@ -192,6 +192,7 @@ enum CliError {
     Prices(rum_meter::cost::PriceError),
     DuplicateAddress { path: PathBuf, address: String },
     LabelTooLarge { path: PathBuf },
+    RepeatedPath { path: PathBuf },
     CostOverflow { path: PathBuf },
     Output,
 }
@@ -213,6 +214,13 @@ impl fmt::Display for CliError {
                 write!(
                     f,
                     "rum-meter: {}: resource label is repeated across too many instances",
+                    rum_meter::rum::escape_controls(&path.display().to_string())
+                )
+            }
+            Self::RepeatedPath { path } => {
+                write!(
+                    f,
+                    "rum-meter: {}: state file is given more than once",
                     rum_meter::rum::escape_controls(&path.display().to_string())
                 )
             }
@@ -238,6 +246,40 @@ fn reject_shared_labels(path: &Path, state: &rum_meter::state::State) -> Result<
     } else {
         Ok(())
     }
+}
+
+/// `count` can load several state files in one invocation and classifies
+/// them all together afterwards, so the budget applies to the sum of every
+/// file's product in that invocation, not to each file alone. `running_total`
+/// carries the sum across calls, one per loaded file; the path blamed on
+/// refusal is whichever file's product pushed the sum over the budget.
+fn reject_shared_label_total(
+    path: &Path,
+    state: &rum_meter::state::State,
+    running_total: &mut usize,
+) -> Result<(), CliError> {
+    *running_total = running_total.saturating_add(rum_meter::rum::shared_label_product(state));
+    if *running_total > rum_meter::rum::MAX_SHARED_LABEL_PRODUCT {
+        Err(CliError::LabelTooLarge {
+            path: path.to_path_buf(),
+        })
+    } else {
+        Ok(())
+    }
+}
+
+/// The same path given more than once to `count` would be loaded and
+/// classified once per occurrence, multiplying both the label budget above
+/// and the memory `classify` needs. Reject the repeat before any file in
+/// the list is opened.
+fn reject_repeated_paths(states: &[PathBuf]) -> Result<(), CliError> {
+    let mut seen = HashSet::with_capacity(states.len());
+    for path in states {
+        if !seen.insert(path.as_path()) {
+            return Err(CliError::RepeatedPath { path: path.clone() });
+        }
+    }
+    Ok(())
 }
 
 /// A repeated address is an input error. Checked before any report is printed.
@@ -321,10 +363,12 @@ fn execute(cli: &Cli) -> Result<RunOutcome, CliError> {
                 )),
                 None => None,
             };
+            reject_repeated_paths(states)?;
             let mut loaded = Vec::with_capacity(states.len());
+            let mut label_total = 0usize;
             for path in states {
                 let state = rum_meter::state::load_state(path).map_err(CliError::State)?;
-                reject_shared_labels(path, &state)?;
+                reject_shared_label_total(path, &state, &mut label_total)?;
                 loaded.push((path.as_path(), state));
             }
             let counted: Vec<_> = loaded

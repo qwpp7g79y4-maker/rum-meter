@@ -118,13 +118,13 @@ fn fixture_top_3_merges_the_rest_into_other() {
 }
 
 #[test]
-fn two_copies_of_the_fixture_are_a_duplicate_address() {
+fn two_copies_of_the_fixture_are_a_repeated_path() {
     let output = run(&["count", "--top", "3", FIXTURE, FIXTURE]);
     let stderr = String::from_utf8(output.stderr).expect("stderr is utf-8");
     assert_eq!(output.status.code(), Some(2), "{stderr}");
     assert!(output.stdout.is_empty(), "{stderr}");
     assert_eq!(
         stderr,
-        "rum-meter: tests/fixtures/v4_top.json: duplicate address null_resource.skip[0]\n"
+        "rum-meter: tests/fixtures/v4_top.json: state file is given more than once\n"
     );
 }
