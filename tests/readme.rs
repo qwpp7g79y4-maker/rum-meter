@@ -498,6 +498,7 @@ fn reference_describes_rules_and_price_errors() {
         "`monthly cost overflows`",
         "`file is UTF-16; save it as UTF-8`",
         "`duplicate address`",
+        "`resource label is repeated across too many instances`",
         "`not a regular file`",
         "`unreadable (not found)`",
         "`unreadable (permission denied)`",

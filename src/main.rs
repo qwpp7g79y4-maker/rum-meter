@@ -191,6 +191,7 @@ enum CliError {
     State(rum_meter::state::LoadError),
     Prices(rum_meter::cost::PriceError),
     DuplicateAddress { path: PathBuf, address: String },
+    LabelTooLarge { path: PathBuf },
     CostOverflow { path: PathBuf },
     Output,
 }
@@ -208,6 +209,13 @@ impl fmt::Display for CliError {
                     rum_meter::rum::escape_controls(address)
                 )
             }
+            Self::LabelTooLarge { path } => {
+                write!(
+                    f,
+                    "rum-meter: {}: resource label is repeated across too many instances",
+                    rum_meter::rum::escape_controls(&path.display().to_string())
+                )
+            }
             Self::CostOverflow { path } => {
                 write!(
                     f,
@@ -217,6 +225,18 @@ impl fmt::Display for CliError {
             }
             Self::Output => f.write_str("rum-meter: cannot write report to stdout"),
         }
+    }
+}
+
+/// Shared module, type and name are copied once per instance inside `classify`.
+/// Reject the product before that copy. The label text stays out of the message.
+fn reject_shared_labels(path: &Path, state: &rum_meter::state::State) -> Result<(), CliError> {
+    if rum_meter::rum::shared_label_product(state) > rum_meter::rum::MAX_SHARED_LABEL_PRODUCT {
+        Err(CliError::LabelTooLarge {
+            path: path.to_path_buf(),
+        })
+    } else {
+        Ok(())
     }
 }
 
@@ -303,10 +323,9 @@ fn execute(cli: &Cli) -> Result<RunOutcome, CliError> {
             };
             let mut loaded = Vec::with_capacity(states.len());
             for path in states {
-                loaded.push((
-                    path.as_path(),
-                    rum_meter::state::load_state(path).map_err(CliError::State)?,
-                ));
+                let state = rum_meter::state::load_state(path).map_err(CliError::State)?;
+                reject_shared_labels(path, &state)?;
+                loaded.push((path.as_path(), state));
             }
             let counted: Vec<_> = loaded
                 .iter()
@@ -353,7 +372,9 @@ fn execute(cli: &Cli) -> Result<RunOutcome, CliError> {
                 None => None,
             };
             let old_state = rum_meter::state::load_state(old).map_err(CliError::State)?;
+            reject_shared_labels(old, &old_state)?;
             let new_state = rum_meter::state::load_state(new).map_err(CliError::State)?;
+            reject_shared_labels(new, &new_state)?;
             let old_verdicts = rum_meter::rum::classify(&old_state);
             let new_verdicts = rum_meter::rum::classify(&new_state);
             reject_duplicate(old, &old_verdicts)?;
