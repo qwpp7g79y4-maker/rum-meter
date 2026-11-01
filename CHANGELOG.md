@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- The README said that passing the same state file to `count` twice was the `duplicate address` error. It is exit 2, `state file is given more than once`, before any file is opened, and the totals are not printed. The same address in two different files is still `duplicate address`.
+
 ## [0.1.3] - 2026-10-25
 
 ### Fixed

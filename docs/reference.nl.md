@@ -88,7 +88,7 @@ Een state-bestand, een prijsbestand en stdin worden in stukken gelezen tot een v
 
 Vóór de telling wordt de lengte van `module`, `mode`, `type` en `name` op elke resource vermenigvuldigd met het aantal instanties (een blok zonder instanties telt als één) en die producten worden opgeteld. Boven 32 MiB is die som exit 2: `resource label is repeated across too many instances`. De labeltekst wordt niet afgedrukt. Duizenden korte namen blijven onder de grens en worden geteld. De controle geldt voor elk bestand bij `count`, en voor beide bestanden bij `diff`, ná het lezen en vóór elke kopie per instantie.
 
-Elk adres mag één keer voorkomen, in één bestand en over de bestanden die aan `count` worden meegegeven. Een herhaling, op root, in een module, met count of for_each, als deposed object, of in een later bestand, is exit 2: `duplicate address`, plus het adres. Stuurtekens, en onzichtbare of tekstrichting-wijzigende opmaaktekens zoals U+200B en U+202E, in dat adres worden geschreven als `\uXXXX`. Attribuutwaarden zitten er niet bij. De eerste herhaling in de volgorde van de beslissingen wordt gemeld. Bij `diff` blijven added en removed daardoor optellen tot de RUM-delta. Tekstuitvoer escapt stuurtekens op dezelfde manier. JSON houdt de tekens en laat de JSON-encoder ze escapen.
+Elk adres mag één keer voorkomen, in één bestand en over de bestanden die aan `count` worden meegegeven. Een herhaling, op root, in een module, met count of for_each, als deposed object, of in een later bestand, is exit 2: `duplicate address`, plus het adres. Hetzelfde pad twee keer aan `count` meegeven is exit 2, `state file is given more than once`, vóór een van die bestanden wordt geopend. De totalen worden niet afgedrukt. Stuurtekens, en onzichtbare of tekstrichting-wijzigende opmaaktekens zoals U+200B en U+202E, in dat adres worden geschreven als `\uXXXX`. Attribuutwaarden zitten er niet bij. De eerste herhaling in de volgorde van de beslissingen wordt gemeld. Bij `diff` blijven added en removed daardoor optellen tot de RUM-delta. Tekstuitvoer escapt stuurtekens op dezelfde manier. JSON houdt de tekens en laat de JSON-encoder ze escapen.
 
 ## Hoe het rekent
 
@@ -140,7 +140,7 @@ Tekstrapporten en foutmeldingen escapen stuurtekens, en onzichtbare of tekstrich
 | --- | --- |
 | 0 | Gelukt. Een gelijke drempel hoort daarbij. |
 | 1 | Drempel: opgetelde RUM boven `--max-rum` bij count, of de RUM-stijging boven `--max-increase` bij diff. Het rapport wordt toch afgedrukt. |
-| 2 | Invoerfout: onleesbaar bestand, geen gewoon bestand, ongeldige JSON, een state die geen JSON-object is, stateversie niet 4, UTF-16 of UTF-32, een dubbel adres, een ongeldig prijsbestand, of kosten die overlopen. Stdout is leeg. |
+| 2 | Invoerfout: onleesbaar bestand, geen gewoon bestand, ongeldige JSON, een state die geen JSON-object is, stateversie niet 4, UTF-16 of UTF-32, een dubbel adres, hetzelfde statebestand meer dan eens, een ongeldig prijsbestand, of kosten die overlopen. Stdout is leeg. |
 | 3 | Gebruiksfout, ook een vlag die het rapport niet zou veranderen. Stdout is leeg. |
 
 Als het rapport niet naar stdout geschreven of geflusht kan worden, is de exitcode ook 2, met `rum-meter: cannot write report to stdout`. Er kan dan al een deel van het rapport geschreven zijn. Een gesloten stdout is dezelfde fout. `--version` en `--help` die niet geschreven of geflusht kunnen worden zijn ook exit 2, niet 0, met `rum-meter: cannot write message to stdout`. Een mislukte schrijfactie geeft geen panic. Als stderr ook niet geschreven kan worden, blijft de exitcode hetzelfde en is er geen panic.
@@ -176,6 +176,7 @@ Elke rij hieronder draait tegen de binary. De melding is de hele stderr, en `\n`
 | `--prices` | count | Het prijsbestand is leeg. | `count --prices tests/fixtures/empty.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/empty.json: invalid json at line 1 column 0\n` |
 | `--prices` | count | Twee tiers hebben dezelfde naam. | `count --prices tests/fixtures/dup-tier-prices.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/dup-tier-prices.json: duplicate tier name\n` |
 | statebestand | diff | De oude state is versie 3. | `diff tests/fixtures/version_3.json tests/fixtures/v4_handwritten.json` | 2 | `rum-meter: tests/fixtures/version_3.json: state version is not 4\n` |
+| statebestand | count | Hetzelfde pad twee keer. | `count tests/fixtures/v4_one_managed.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/v4_one_managed.json: state file is given more than once\n` |
 | statebestand | count | Een apparaat is geen gewoon bestand (Linux en macOS). | `count /dev/null` | 2 | `rum-meter: /dev/null: not a regular file\n` |
 | `--prices` | count | Het prijzenpad is een apparaat (Linux en macOS). | `count --prices /dev/null tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: /dev/null: not a regular file\n` |
 

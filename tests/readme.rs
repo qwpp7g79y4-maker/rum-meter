@@ -222,6 +222,32 @@ fn readme_has_the_sections_and_names() {
     }
 }
 
+/// CR1 and CR2 promises: exact money, a repeated path, a JSON array, and FIFOs.
+#[test]
+fn readme_names_exact_price_repeated_file_and_fifo() {
+    for rel in [README, README_NL] {
+        let text = read(rel);
+        for part in [
+            "`state file is given more than once`",
+            "`duplicate address`",
+            "`state is not an object`",
+            "0.004999999999999999999",
+            "1.005",
+            "1.01",
+            "cannot write message to stdout",
+            "cannot write report to stdout",
+        ] {
+            assert!(text.contains(part), "{rel} is missing {part}");
+        }
+    }
+    let en = read(README);
+    assert!(en.contains("A symlink to a FIFO is refused the same way"));
+    assert!(en.contains("does not hang"));
+    let nl = read(README_NL);
+    assert!(nl.contains("Een symlink naar een FIFO wordt op dezelfde manier geweigerd"));
+    assert!(nl.contains("niet blijft hangen"));
+}
+
 #[test]
 fn language_switch_on_top_of_every_page() {
     for (rel, line) in [
@@ -435,6 +461,7 @@ fn option_and_error_tables_match_the_binary() {
         "diff tests/fixtures/version_3.json tests/fixtures/v4_handwritten.json",
         "count /dev/null",
         "count --prices /dev/null tests/fixtures/v4_one_managed.json",
+        "count tests/fixtures/v4_one_managed.json tests/fixtures/v4_one_managed.json",
     ] {
         required.insert(call);
     }
@@ -498,6 +525,7 @@ fn reference_describes_rules_and_price_errors() {
         "`monthly cost overflows`",
         "`file is UTF-16; save it as UTF-8`",
         "`duplicate address`",
+        "`state file is given more than once`",
         "`resource label is repeated across too many instances`",
         "`file is larger than 128 MiB`",
         "`not a regular file`",

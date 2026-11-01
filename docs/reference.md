@@ -86,7 +86,7 @@ A state file, a price file and stdin are read in chunks up to a fixed cap of 128
 
 Before classification, the length of `module`, `mode`, `type` and `name` on each resource is multiplied by its instance count (a block with no instances counts as one) and those products are summed. Above 32 MiB that sum is exit 2: `resource label is repeated across too many instances`. The label text is not printed. Thousands of short names stay under the limit and are counted. The check runs for every file passed to `count`, and for both files passed to `diff`, after the file is read and before any per-instance copy.
 
-Each address may occur once, in one file and across the files passed to `count`. A repeat, at the root, in a module, with count or for_each, as a deposed object, or in a later file, is exit 2: `duplicate address`, plus the address. Control characters, and invisible or bidirectional format characters such as U+200B and U+202E, in that address are written as `\uXXXX`. Attribute values are not included. The first repeat in verdict order is the one reported. On `diff`, added and removed therefore still add up to the RUM delta. Text output escapes control characters the same way. JSON keeps the characters and lets the JSON encoder escape them.
+Each address may occur once, in one file and across the files passed to `count`. A repeat, at the root, in a module, with count or for_each, as a deposed object, or in a later file, is exit 2: `duplicate address`, plus the address. Passing the same path to `count` twice is exit 2, `state file is given more than once`, before any of those files is opened. The totals are not printed. Control characters, and invisible or bidirectional format characters such as U+200B and U+202E, in that address are written as `\uXXXX`. Attribute values are not included. The first repeat in verdict order is the one reported. On `diff`, added and removed therefore still add up to the RUM delta. Text output escapes control characters the same way. JSON keeps the characters and lets the JSON encoder escape them.
 
 ## How it counts
 
@@ -138,7 +138,7 @@ Text reports and error messages escape control characters, and invisible or bidi
 | --- | --- |
 | 0 | Success. An equal threshold is included. |
 | 1 | Threshold: summed RUM above `--max-rum` on count, or the RUM increase above `--max-increase` on diff. The report is still printed. |
-| 2 | Input error: unreadable file, not a regular file, invalid JSON, a state that is not a JSON object, state version not 4, UTF-16 or UTF-32, a duplicate address, an invalid price file, or a cost that overflows. Stdout is empty. |
+| 2 | Input error: unreadable file, not a regular file, invalid JSON, a state that is not a JSON object, state version not 4, UTF-16 or UTF-32, a duplicate address, the same state file given more than once, an invalid price file, or a cost that overflows. Stdout is empty. |
 | 3 | Usage error, including a flag that would not change the report. Stdout is empty. |
 
 A report that cannot be written or flushed to stdout also exits 2, with `rum-meter: cannot write report to stdout`. Some report bytes may already have been written when the failure occurs. A closed stdout is the same error. `--version` and `--help` that cannot be written or flushed also exit 2, not 0, with `rum-meter: cannot write message to stdout`. A failed write does not panic. When stderr cannot be written either, the exit code is unchanged and there is no panic.
@@ -174,6 +174,7 @@ Every row below is run against the binary. The message is the whole stderr, and 
 | `--prices` | count | The price file is empty. | `count --prices tests/fixtures/empty.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/empty.json: invalid json at line 1 column 0\n` |
 | `--prices` | count | Two tiers have the same name. | `count --prices tests/fixtures/dup-tier-prices.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/dup-tier-prices.json: duplicate tier name\n` |
 | state file | diff | The old state is version 3. | `diff tests/fixtures/version_3.json tests/fixtures/v4_handwritten.json` | 2 | `rum-meter: tests/fixtures/version_3.json: state version is not 4\n` |
+| state file | count | The same path twice. | `count tests/fixtures/v4_one_managed.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/v4_one_managed.json: state file is given more than once\n` |
 | state file | count | A device is not a regular file (Linux and macOS). | `count /dev/null` | 2 | `rum-meter: /dev/null: not a regular file\n` |
 | `--prices` | count | The price path is a device (Linux and macOS). | `count --prices /dev/null tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: /dev/null: not a regular file\n` |
 

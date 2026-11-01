@@ -284,6 +284,28 @@ fn version_to_dev_full_is_not_success() {
     );
 }
 
+#[cfg(target_os = "linux")]
+#[test]
+fn help_to_dev_full_is_not_success() {
+    let full_out = fs::OpenOptions::new()
+        .write(true)
+        .open("/dev/full")
+        .expect("/dev/full");
+    let output = Command::new(env!("CARGO_BIN_EXE_rum-meter"))
+        .arg("--help")
+        .stdout(full_out)
+        .output()
+        .unwrap();
+    let code = output.status.code();
+    assert_ne!(code, Some(0), "help to /dev/full exited 0");
+    assert_ne!(code, Some(101), "panic: {code:?}");
+    assert_eq!(code, Some(2), "{code:?}");
+    assert_eq!(
+        String::from_utf8(output.stderr).unwrap(),
+        "rum-meter: cannot write message to stdout\n"
+    );
+}
+
 #[cfg(unix)]
 #[test]
 fn closed_stdout_returns_an_error_without_panicking() {
@@ -359,5 +381,30 @@ fn same_file_twice_is_not_counted_twice() {
     assert_eq!(
         String::from_utf8(output.stderr).unwrap(),
         "rum-meter: a.json: state file is given more than once\n"
+    );
+}
+
+/// Two different files that share one counting address must not add up to 2.
+#[test]
+fn same_address_in_two_files_is_not_summed() {
+    let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+        .join("regressions")
+        .join("same-address");
+    fs::create_dir_all(&dir).unwrap();
+    let body = r#"{"version":4,"resources":[{"mode":"managed","type":"random_id","name":"x","instances":[{}]}]}"#;
+    fs::write(dir.join("a.json"), body).unwrap();
+    fs::write(dir.join("b.json"), body).unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_rum-meter"))
+        .current_dir(&dir)
+        .args(["count", "a.json", "b.json"])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty(), "{:?}", output.stdout);
+    let text = String::from_utf8(output.stdout).unwrap();
+    assert!(!text.contains("total rum"), "{text}");
+    assert_eq!(
+        String::from_utf8(output.stderr).unwrap(),
+        "rum-meter: b.json: duplicate address random_id.x\n"
     );
 }
