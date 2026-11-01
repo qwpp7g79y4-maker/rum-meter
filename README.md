@@ -251,6 +251,8 @@ Exit code 0 is success. Exit code 1 is a threshold: `--max-rum` on `count`, `--m
 A report that cannot be written to stdout is exit 2, with `rum-meter: cannot write report to stdout`, and a closed stdout is the same error. `--version` and `--help` that cannot be written are exit 2, not 0, with `rum-meter: cannot write message to stdout`. A failed write does not panic, even when stderr cannot be written.
 
 All options, exit codes and error messages are listed in the [reference](docs/reference.md) and in `rum-meter --help`.
+The manual page is [`man/rum-meter.1`](man/rum-meter.1).
+`rum-meter --help` lists the commands `count`, `diff` and `help`.
 
 ## How it counts
 

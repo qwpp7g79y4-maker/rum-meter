@@ -1,0 +1,239 @@
+.TH RUM-METER 1 "2026-11-01" "rum-meter 0.1.3" "User Commands"
+.SH NAME
+rum-meter \- Estimate billable HCP Terraform RUM from local state files
+.SH SYNOPSIS
+.nf
+Usage: rum-meter [OPTIONS] <COMMAND>
+Usage: rum-meter count [OPTIONS] <STATE>...
+Usage: rum-meter diff [OPTIONS] <OLD> <NEW>
+Usage: rum-meter help [COMMAND]...
+.fi
+.SH DESCRIPTION
+Estimate billable HCP Terraform RUM from local state files.
+.PP
+.B count
+Count billable RUM in one or more state files.
+Each
+.I STATE
+is a state file, or - to read stdin.
+.PP
+.B diff
+Compare billable RUM in two state files.
+.I OLD
+is the earlier state file, or - to read stdin.
+.I NEW
+is the later state file, or - to read stdin.
+.PP
+.B help
+Print this message or the help of the given subcommand(s).
+An optional
+.I COMMAND
+prints help for that subcommand.
+The help text for
+.B help
+itself says: Print help for the subcommand(s).
+.B rum-meter help
+prints the same text as
+.B rum-meter --help
+and exits 0.
+.B rum-meter help count
+prints the same text as
+.B rum-meter count --help
+and exits 0.
+.B rum-meter help diff
+prints the same text as
+.B rum-meter diff --help
+and exits 0.
+.B rum-meter help help
+prints the help command's own text and exits 0.
+That text names no options.
+The word after
+.B help
+is a command name, so
+.B rum-meter help --help
+exits 3 and reports an unrecognized subcommand.
+.PP
+A state file has to be Terraform state format version 4, and the root value has to be a JSON object.
+The program reads the paths it is given.
+It reads stdin only when a state argument is - and stdin is a pipe or a regular file.
+A price file is always a path.
+.B --prices -
+is not stdin.
+The program makes no network connection.
+.SH OPTIONS
+.B rum-meter --help
+and
+.B rum-meter -h
+list the options below and exit 0.
+.B rum-meter count --help
+and
+.B rum-meter diff --help
+list the same options except
+.BR --version ,
+and exit 0.
+.B -h
+is the short form of
+.B --help
+on the top level, on
+.B count
+and on
+.BR diff .
+.B -V
+is the short form of
+.B --version
+and is accepted on the top level only.
+.TP
+.B --json
+Print JSON instead of text.
+.TP
+.B --explain
+Print one line per instance.
+On
+.B diff
+the flag changes the report only together with
+.BR --json .
+.TP
+.B --top <N>
+List at most N modules and N resource types.
+On
+.B diff
+the flag changes the report only together with
+.BR --json .
+.TP
+.B --prices <FILE>
+Read tier prices from this JSON file.
+.TP
+.B --hours-per-month <N>
+Hours in a month for the cost estimate.
+The default is 730.
+The flag changes the report only together with
+.BR --prices .
+.TP
+.B --max-rum <N>
+RUM limit for count.
+The report is still printed.
+The exit status is 1 when the summed RUM is greater than N.
+N itself is success.
+.TP
+.B --max-increase <N>
+RUM increase limit for diff.
+The report is still printed.
+The exit status is 1 when new RUM minus old RUM is greater than N.
+An equal increase is success.
+A decrease is success.
+.TP
+.B -h, --help
+Print help.
+.TP
+.B -V, --version
+Print version.
+.B rum-meter --version
+and
+.B rum-meter -V
+print
+.B rum-meter 0.1.3
+and exit 0.
+.B count --version
+and
+.B diff --version
+are unexpected arguments and exit 3.
+.PP
+A flag that would not change the report exits 3, with one fixed line on stderr and nothing on stdout, before any file is read.
+The same lines end the text of
+.BR rum-meter\ --help ,
+.B count --help
+and
+.BR diff\ --help .
+If several apply, the first of these wins:
+.PP
+.nf
+--max-increase only works with diff
+--max-rum only works with count
+--hours-per-month only works together with --prices
+--top with diff only works together with --json
+--explain with diff only works together with --json
+.fi
+.SH "EXIT STATUS"
+.TP
+.B 0
+Success.
+.B --help
+and
+.B --version
+exit 0 when their text can be written.
+A count or a diff that finishes exits 0, including when the total or the increase is equal to the threshold.
+.TP
+.B 1
+A threshold is exceeded.
+.B --max-rum
+on
+.B count
+when the summed RUM is greater than N, or
+.B --max-increase
+on
+.B diff
+when the RUM increase is greater than N.
+The report is still printed.
+.TP
+.B 2
+An input error.
+That includes an unreadable file, a path that is not a regular file, invalid JSON, a state that is not a JSON object, a state version other than 4, a duplicate address, the same state file given more than once, UTF-16 or UTF-32, an invalid price file, a monthly cost that overflows, a file larger than 128 MiB, or a resource label repeated across too many instances (a 32 MiB shared label budget).
+Stdout is empty for these errors.
+A report that cannot be written to stdout is also exit 2, with
+.BR "rum-meter: cannot write report to stdout" .
+Some of the report may already have been written.
+.B --version
+and
+.B --help
+that cannot be written are exit 2, not 0, with
+.BR "rum-meter: cannot write message to stdout" .
+A failed write does not panic.
+.TP
+.B 3
+A usage error.
+An unknown option, a missing argument, and a flag that would not change the report are exit 3.
+Stdout is empty.
+.SH EXAMPLES
+.I examples/one-managed.tfstate
+in this repository is a fictional Terraform state of format version 4.
+It is not a state file from this machine.
+It has one managed
+.I random_id.handbook
+instance.
+From the repository root the command exits 0 and prints:
+.PP
+.nf
+$ rum-meter count examples/one-managed.tfstate
+file: examples/one-managed.tfstate
+rum: 1
+not counted: R2 0, R3 0, R4 0
+total rum: 1
+not counted: R2 0, R3 0, R4 0
+modules:
+  (root): 1
+types:
+  random_id: 1
+estimate: HCP Terraform bills the hourly peak; this is a single snapshot
+.fi
+.PP
+These commands exit 0:
+.PP
+.nf
+$ rum-meter --help
+$ rum-meter -h
+$ rum-meter --version
+$ rum-meter -V
+$ rum-meter count --help
+$ rum-meter diff --help
+$ rum-meter help
+$ rum-meter help count
+$ rum-meter help diff
+$ rum-meter help help
+.fi
+.PP
+.B rum-meter --version
+prints:
+.PP
+.nf
+rum-meter 0.1.3
+.fi
