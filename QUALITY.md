@@ -9,7 +9,7 @@ This page shows how each release of rum-meter was checked before it was publishe
 | Version | 0.1.2 ([release](https://github.com/qwpp7g79y4-maker/rum-meter/releases/tag/v0.1.2), [crates.io](https://crates.io/crates/rum-meter/0.1.2)) |
 | Commit checked | [`adc53d2`](https://github.com/qwpp7g79y4-maker/rum-meter/commit/adc53d2) |
 | Date | 2026-10-25 |
-| Tests | 223 automated tests, run in debug and release mode |
+| Tests | 232 automated tests, run in debug and release mode |
 
 ### How we checked
 
