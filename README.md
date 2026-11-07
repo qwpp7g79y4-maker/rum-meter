@@ -302,6 +302,8 @@ The billing page shows the count afterwards. rum-meter reads a file you already 
 
 Where the fixtures come from: [tests/fixtures/README.md](tests/fixtures/README.md).
 
+The suite has 232 automated tests (`cargo test`). [QUALITY.md](QUALITY.md) records the same number.
+
 ## Privacy
 
 rum-meter is fully offline: no network, no API key, no telemetry. The binary reads only the paths you pass, or stdin when a state path is `-`. Output contains addresses, module paths, types, rule codes and counts. Attribute values, sensitive values, private data and outputs are left out. `tests/safety.rs` guards that with synthetic fixtures. No error message contains bytes from the file, only the path, the line and column of a parse error, and the kind of error.

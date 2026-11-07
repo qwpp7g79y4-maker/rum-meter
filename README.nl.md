@@ -302,6 +302,8 @@ De billingpagina toont de telling achteraf. rum-meter leest een bestand dat je a
 
 Waar de fixtures vandaan komen: [tests/fixtures/README.md](tests/fixtures/README.md).
 
+De suite heeft 232 automatische tests (`cargo test`). [QUALITY.nl.md](QUALITY.nl.md) noemt hetzelfde aantal.
+
 ## Privacy
 
 rum-meter werkt volledig offline: geen netwerk, geen API-sleutel, geen telemetrie. De binary leest alleen de paden die je opgeeft, of stdin als een statepad `-` is. In de uitvoer staan adressen, modulepaden, types, regelcodes en aantallen. Attribuutwaarden, sensitive values, private data en outputs blijven achterwege. `tests/safety.rs` bewaakt dat met synthetische fixtures. Geen foutmelding bevat bytes uit het bestand, alleen het pad, de regel en de kolom van een parsefout, en het soort fout.

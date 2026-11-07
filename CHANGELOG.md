@@ -8,6 +8,10 @@ All notable changes to this project are documented in this file.
 
 - Manual page `man/rum-meter.1`, a fictional state in `examples/one-managed.tfstate`, and `tests/handbook_help.rs`. The test checks the long options in `rum-meter --help` against the manual page and runs the example command.
 
+### Changed
+
+- README and README.nl state the test count (232), the same number as `QUALITY.md` and `QUALITY.nl.md`.
+
 ### Fixed
 
 - The README said that passing the same state file to `count` twice was the `duplicate address` error. It is exit 2, `state file is given more than once`, before any file is opened, and the totals are not printed. The same address in two different files is still `duplicate address`.
