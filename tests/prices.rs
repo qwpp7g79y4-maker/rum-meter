@@ -40,7 +40,10 @@ fn invalid_price_file_exits_2() {
         "stdout should be empty on an input error"
     );
     let stderr = String::from_utf8(output.stderr).expect("stderr is utf-8");
-    assert_eq!(stderr, format!("rum-meter: {prices}: currency is empty\n"));
+    assert_eq!(
+        stderr,
+        format!("rum-meter: {prices}: currency is empty; give a currency such as EUR\n")
+    );
     assert!(!stderr.contains("CANARY-SECRET-PR-PRICES"));
 }
 
@@ -61,7 +64,7 @@ fn duplicate_tier_name_exits_2_and_does_not_print_a_cost() {
     let stderr = String::from_utf8(output.stderr).expect("stderr is utf-8");
     assert_eq!(
         stderr,
-        format!("rum-meter: {prices}: duplicate tier name\n")
+        format!("rum-meter: {prices}: duplicate tier name; give each tier its own name\n")
     );
 }
 
@@ -94,7 +97,7 @@ fn oversized_currency_exits_2_without_printing_it() {
     let stderr = String::from_utf8(output.stderr).expect("stderr is utf-8");
     assert_eq!(
         stderr,
-        format!("rum-meter: {prices}: currency is too long\n")
+        format!("rum-meter: {prices}: currency is too long; use a short code such as EUR\n")
     );
     assert!(!stderr.contains("CANARY-SECRET-PR-WIDE"));
     assert!(!stderr.contains(&"C".repeat(16)));
@@ -118,7 +121,9 @@ fn non_ascii_currency_exits_2() {
     let stderr = String::from_utf8(output.stderr).expect("stderr is utf-8");
     assert_eq!(
         stderr,
-        format!("rum-meter: {prices}: currency is not visible ASCII\n")
+        format!(
+            "rum-meter: {prices}: currency is not visible ASCII; use letters only, such as EUR\n"
+        )
     );
     assert!(!stderr.contains('€'));
     assert!(!stderr.contains("CANARY-SECRET-PR-EURO"));

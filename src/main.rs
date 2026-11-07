@@ -205,7 +205,7 @@ impl fmt::Display for CliError {
             Self::DuplicateAddress { path, address } => {
                 write!(
                     f,
-                    "rum-meter: {}: duplicate address {}",
+                    "rum-meter: {}: duplicate address {}; each address may occur once, so remove the repeat or do not pass overlapping states",
                     rum_meter::rum::escape_controls(&path.display().to_string()),
                     rum_meter::rum::escape_controls(address)
                 )
@@ -213,25 +213,25 @@ impl fmt::Display for CliError {
             Self::LabelTooLarge { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: resource label is repeated across too many instances",
+                    "rum-meter: {}: resource label is repeated across too many instances; split the state into smaller files",
                     rum_meter::rum::escape_controls(&path.display().to_string())
                 )
             }
             Self::RepeatedPath { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: state file is given more than once",
+                    "rum-meter: {}: state file is given more than once; pass each state file once",
                     rum_meter::rum::escape_controls(&path.display().to_string())
                 )
             }
             Self::CostOverflow { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: monthly cost overflows",
+                    "rum-meter: {}: monthly cost overflows; check the prices and --hours-per-month",
                     rum_meter::rum::escape_controls(&path.display().to_string())
                 )
             }
-            Self::Output => f.write_str("rum-meter: cannot write report to stdout"),
+            Self::Output => f.write_str("rum-meter: cannot write report to stdout; check that stdout is open and the disk is not full"),
         }
     }
 }

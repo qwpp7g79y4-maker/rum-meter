@@ -173,6 +173,8 @@ fn readme_has_the_sections_and_names() {
         "## Installation",
         "## System requirements",
         "## Quick start",
+        "## Example",
+        "## Options",
         "## How it counts",
         "## Compared with alternatives",
         "## Limitations",
@@ -284,7 +286,7 @@ fn english_and_dutch_pages_match() {
         );
     }
     let nl = read(README_NL);
-    assert_eq!(headings(&nl).len(), 11, "README.nl.md section count");
+    assert_eq!(headings(&nl).len(), 13, "README.nl.md section count");
     assert_eq!(headings(&read(REF)).len(), 7, "reference section count");
     assert!(nl.contains("7 oktober 2026"), "Dutch README date");
     assert!(
@@ -293,10 +295,41 @@ fn english_and_dutch_pages_match() {
     );
 }
 
+/// Every option in `rum-meter --help` is named in both READMEs.
+#[test]
+fn every_help_option_is_in_both_readmes() {
+    let output = bin().arg("--help").output().expect("start binary");
+    let help = String::from_utf8(output.stdout).expect("help is utf-8");
+    let mut seen = 0;
+    for line in help.lines() {
+        let Some(start) = line.find("--") else {
+            continue;
+        };
+        let name = line[start..].split_whitespace().next().unwrap();
+        if !line.starts_with(' ') {
+            continue;
+        }
+        seen += 1;
+        for rel in [README, README_NL] {
+            let options = section(
+                &read(rel),
+                if rel == README {
+                    "## Options"
+                } else {
+                    "## Opties"
+                },
+            )
+            .to_string();
+            assert!(options.contains(&format!("`{name}")), "{rel} lacks {name}");
+        }
+    }
+    assert!(seen >= 8, "found only {seen} options in --help");
+}
+
 #[test]
 fn licenses_and_manifest_name_pepai() {
-    assert!(read("LICENSE-MIT").contains("Copyright (c) 2026 PEPAI"));
-    assert!(read("LICENSE-APACHE").contains("Copyright 2026 PEPAI"));
+    assert!(read("LICENSE-MIT").contains("Copyright (c) 2025-2026 PEPAI / Pepijn de Jonge"));
+    assert!(read("LICENSE-APACHE").contains("Copyright 2025-2026 PEPAI / Pepijn de Jonge"));
     let cargo = read("Cargo.toml");
     assert!(cargo.contains("PEPAI <pep_ai@icloud.com>"), "{cargo}");
     assert!(

@@ -177,7 +177,9 @@ fn input_error_wins_over_a_threshold_breach() {
     assert!(output.stdout.is_empty(), "stdout should stay empty");
     assert_eq!(
         stderr,
-        format!("rum-meter: {bad}: unreadable (not found)\n")
+        format!(
+            "rum-meter: {bad}: unreadable (not found); check that the path exists and that you may read it\n"
+        )
     );
     assert!(!stderr.contains("CANARY-SECRET"));
 }

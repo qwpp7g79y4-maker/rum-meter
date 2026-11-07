@@ -134,6 +134,8 @@ Text reports and error messages escape control characters, and invisible or bidi
 
 ## Exit codes and usage errors
 
+Every exit-2 message below names what went wrong and, after a semicolon, what you can do about it.
+
 | Code | Meaning |
 | --- | --- |
 | 0 | Success. An equal threshold is included. |
@@ -162,21 +164,21 @@ Every row below is run against the binary. The message is the whole stderr, and 
 | arguments | diff | The new file is missing. | `diff only.json` | 3 | `error: the following required arguments were not provided:\n  <NEW>\n\nUsage: rum-meter diff <OLD> <NEW>\n\nFor more information, try '--help'.\n` |
 | arguments | top level | Unknown flag. | `--not-an-option` | 3 | `error: unexpected argument '--not-an-option' found\n\nUsage: rum-meter [OPTIONS] <COMMAND>\n\nFor more information, try '--help'.\n` |
 | `--top` | count | Not a number. | `count --top abc tests/fixtures/v4_one_managed.json` | 3 | `error: invalid value 'abc' for '--top <N>': invalid digit found in string\n\nFor more information, try '--help'.\n` |
-| state file | count | Missing path. | `count tests/fixtures/missing.json` | 2 | `rum-meter: tests/fixtures/missing.json: unreadable (not found)\n` |
-| state file | count | A directory is not a regular file. | `count tests/fixtures` | 2 | `rum-meter: tests/fixtures: not a regular file\n` |
-| state file | count | Empty file. | `count tests/fixtures/empty.json` | 2 | `rum-meter: tests/fixtures/empty.json: invalid json at line 1 column 0\n` |
-| state file | count | Truncated JSON. | `count tests/fixtures/broken.json` | 2 | `rum-meter: tests/fixtures/broken.json: invalid json at line 2 column 0\n` |
-| state file | count | Version 3. | `count tests/fixtures/version_3.json` | 2 | `rum-meter: tests/fixtures/version_3.json: state version is not 4\n` |
-| state file | count | Version is text, not a number. | `count tests/fixtures/version_string.json` | 2 | `rum-meter: tests/fixtures/version_string.json: invalid json at line 1 column 33\n` |
-| `--prices` | count | A state file has no currency. | `count --prices tests/fixtures/v4_one_managed.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/v4_one_managed.json: currency is empty\n` |
-| `--prices` | count | The price path is a directory. | `count --prices tests/fixtures tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures: not a regular file\n` |
-| `--prices` | count | The price file is missing. | `count --prices tests/fixtures/missing-prices.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/missing-prices.json: unreadable (not found)\n` |
-| `--prices` | count | The price file is empty. | `count --prices tests/fixtures/empty.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/empty.json: invalid json at line 1 column 0\n` |
-| `--prices` | count | Two tiers have the same name. | `count --prices tests/fixtures/dup-tier-prices.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/dup-tier-prices.json: duplicate tier name\n` |
-| state file | diff | The old state is version 3. | `diff tests/fixtures/version_3.json tests/fixtures/v4_handwritten.json` | 2 | `rum-meter: tests/fixtures/version_3.json: state version is not 4\n` |
-| state file | count | The same path twice. | `count tests/fixtures/v4_one_managed.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/v4_one_managed.json: state file is given more than once\n` |
-| state file | count | A device is not a regular file (Linux and macOS). | `count /dev/null` | 2 | `rum-meter: /dev/null: not a regular file\n` |
-| `--prices` | count | The price path is a device (Linux and macOS). | `count --prices /dev/null tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: /dev/null: not a regular file\n` |
+| state file | count | Missing path. | `count tests/fixtures/missing.json` | 2 | `rum-meter: tests/fixtures/missing.json: unreadable (not found); check that the path exists and that you may read it\n` |
+| state file | count | A directory is not a regular file. | `count tests/fixtures` | 2 | `rum-meter: tests/fixtures: not a regular file; pass a regular file, or - to read stdin\n` |
+| state file | count | Empty file. | `count tests/fixtures/empty.json` | 2 | `rum-meter: tests/fixtures/empty.json: invalid json at line 1 column 0; fix the file there, or write it again with terraform state pull\n` |
+| state file | count | Truncated JSON. | `count tests/fixtures/broken.json` | 2 | `rum-meter: tests/fixtures/broken.json: invalid json at line 2 column 0; fix the file there, or write it again with terraform state pull\n` |
+| state file | count | Version 3. | `count tests/fixtures/version_3.json` | 2 | `rum-meter: tests/fixtures/version_3.json: state version is not 4; only state format version 4 is supported\n` |
+| state file | count | Version is text, not a number. | `count tests/fixtures/version_string.json` | 2 | `rum-meter: tests/fixtures/version_string.json: invalid json at line 1 column 33; fix the file there, or write it again with terraform state pull\n` |
+| `--prices` | count | A state file has no currency. | `count --prices tests/fixtures/v4_one_managed.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/v4_one_managed.json: currency is empty; give a currency such as EUR\n` |
+| `--prices` | count | The price path is a directory. | `count --prices tests/fixtures tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures: not a regular file; pass a regular file, or - to read stdin\n` |
+| `--prices` | count | The price file is missing. | `count --prices tests/fixtures/missing-prices.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/missing-prices.json: unreadable (not found); check that the path exists and that you may read it\n` |
+| `--prices` | count | The price file is empty. | `count --prices tests/fixtures/empty.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/empty.json: invalid json at line 1 column 0; fix the file there, or write it again with terraform state pull\n` |
+| `--prices` | count | Two tiers have the same name. | `count --prices tests/fixtures/dup-tier-prices.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/dup-tier-prices.json: duplicate tier name; give each tier its own name\n` |
+| state file | diff | The old state is version 3. | `diff tests/fixtures/version_3.json tests/fixtures/v4_handwritten.json` | 2 | `rum-meter: tests/fixtures/version_3.json: state version is not 4; only state format version 4 is supported\n` |
+| state file | count | The same path twice. | `count tests/fixtures/v4_one_managed.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/v4_one_managed.json: state file is given more than once; pass each state file once\n` |
+| state file | count | A device is not a regular file (Linux and macOS). | `count /dev/null` | 2 | `rum-meter: /dev/null: not a regular file; pass a regular file, or - to read stdin\n` |
+| `--prices` | count | The price path is a device (Linux and macOS). | `count --prices /dev/null tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: /dev/null: not a regular file; pass a regular file, or - to read stdin\n` |
 
 ## Privacy and safety
 

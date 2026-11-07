@@ -158,21 +158,21 @@ impl fmt::Display for LoadError {
             Self::Unreadable { path, kind } => {
                 write!(
                     f,
-                    "rum-meter: {}: unreadable ({kind})",
+                    "rum-meter: {}: unreadable ({kind}); check that the path exists and that you may read it",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
             Self::NotRegular { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: not a regular file",
+                    "rum-meter: {}: not a regular file; pass a regular file, or - to read stdin",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
             Self::TooLarge { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: file is larger than {} MiB",
+                    "rum-meter: {}: file is larger than {} MiB; pass a smaller file",
                     crate::rum::escape_controls(&path.display().to_string()),
                     crate::regular::MAX_INPUT_BYTES / (1024 * 1024)
                 )
@@ -180,21 +180,21 @@ impl fmt::Display for LoadError {
             Self::InvalidJson { path, line, column } => {
                 write!(
                     f,
-                    "rum-meter: {}: invalid json at line {line} column {column}",
+                    "rum-meter: {}: invalid json at line {line} column {column}; fix the file there, or write it again with terraform state pull",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
             Self::UnsupportedVersion { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: state version is not 4",
+                    "rum-meter: {}: state version is not 4; only state format version 4 is supported",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
             Self::NotObject { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: state is not an object",
+                    "rum-meter: {}: state is not an object; a state file is one JSON object",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }

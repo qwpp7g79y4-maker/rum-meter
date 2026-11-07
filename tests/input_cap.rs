@@ -53,7 +53,7 @@ fn assert_too_large(output: &Output, path: &str) {
     let stderr = String::from_utf8(output.stderr.clone()).expect("stderr is utf-8");
     assert_eq!(
         stderr,
-        format!("rum-meter: {path}: file is larger than 128 MiB\n")
+        format!("rum-meter: {path}: file is larger than 128 MiB; pass a smaller file\n")
     );
 }
 

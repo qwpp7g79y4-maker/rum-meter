@@ -214,7 +214,7 @@ fn failed_stdout_returns_an_error_without_panicking() {
             assert_eq!(output.status.code(), Some(2));
             assert_eq!(
                 String::from_utf8(output.stderr).unwrap(),
-                "rum-meter: cannot write report to stdout\n"
+                "rum-meter: cannot write report to stdout; check that stdout is open and the disk is not full\n"
             );
         }
     }
@@ -323,7 +323,7 @@ fn closed_stdout_returns_an_error_without_panicking() {
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(
         String::from_utf8(output.stderr).unwrap(),
-        "rum-meter: cannot write report to stdout\n"
+        "rum-meter: cannot write report to stdout; check that stdout is open and the disk is not full\n"
     );
 }
 
@@ -380,7 +380,7 @@ fn same_file_twice_is_not_counted_twice() {
     assert!(output.stdout.is_empty());
     assert_eq!(
         String::from_utf8(output.stderr).unwrap(),
-        "rum-meter: a.json: state file is given more than once\n"
+        "rum-meter: a.json: state file is given more than once; pass each state file once\n"
     );
 }
 
@@ -405,6 +405,6 @@ fn same_address_in_two_files_is_not_summed() {
     assert!(!text.contains("total rum"), "{text}");
     assert_eq!(
         String::from_utf8(output.stderr).unwrap(),
-        "rum-meter: b.json: duplicate address random_id.x\n"
+        "rum-meter: b.json: duplicate address random_id.x; each address may occur once, so remove the repeat or do not pass overlapping states\n"
     );
 }

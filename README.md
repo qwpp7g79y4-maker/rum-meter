@@ -6,7 +6,7 @@ Count billable HCP Terraform resources in a local state file, before the invoice
 
 [![crates.io](https://img.shields.io/crates/v/rum-meter.svg)](https://crates.io/crates/rum-meter) [![downloads](https://img.shields.io/crates/d/rum-meter.svg)](https://crates.io/crates/rum-meter) [![CI](https://github.com/qwpp7g79y4-maker/rum-meter/actions/workflows/ci.yml/badge.svg)](https://github.com/qwpp7g79y4-maker/rum-meter/actions/workflows/ci.yml) [![PEPAI checked](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fqwpp7g79y4-maker%2Frum-meter%2Fmain%2F.github%2Fbadge.json)](QUALITY.md) [![MSRV 1.85](https://img.shields.io/badge/MSRV-1.85-blue.svg)](https://github.com/qwpp7g79y4-maker/rum-meter/blob/main/Cargo.toml) [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 
-[Installation](#installation) • [Quick start](#quick-start) • [How it counts](#how-it-counts) • [Alternatives](#compared-with-alternatives) • [Limitations](#limitations) • [Reference](docs/reference.md)
+[Installation](#installation) • [Quick start](#quick-start) • [Example](#example) • [Options](#options) • [How it counts](#how-it-counts) • [Alternatives](#compared-with-alternatives) • [Limitations](#limitations) • [Reference](docs/reference.md)
 
 rum-meter is a command-line tool written in Rust. It reads `terraform.tfstate` files of format version 4 and counts billable HCP Terraform Resources Under Management (RUM) from HashiCorp's definition. It explains each instance, breaks the total down by module and by type, estimates a monthly cost from a price file you supply, and diffs two states. It needs no account and makes no network connection. The result is an estimate.
 
@@ -254,6 +254,55 @@ All options, exit codes and error messages are listed in the [reference](docs/re
 The manual page is [`man/rum-meter.1`](man/rum-meter.1).
 `rum-meter --help` lists the commands `count`, `diff` and `help`.
 
+## Example
+
+The `examples/` directory holds fictional states and their expected output. `tests/examples_golden.rs` checks that rum-meter prints exactly that output.
+
+```sh
+rum-meter count --explain examples/web-stack.tfstate
+```
+
+```text
+file: examples/web-stack.tfstate
+rum: 4
+not counted: R2 1, R3 2, R4 0
+  aws_vpc.main counts R1
+  module.web.aws_instance.app[0] counts R1
+  module.web.aws_instance.app[1] counts R1
+  module.web.aws_security_group.app counts R1
+  module.web.data.aws_ami.base does not count R2
+  null_resource.marker does not count R3
+  terraform_data.version does not count R3
+total rum: 4
+not counted: R2 1, R3 2, R4 0
+modules:
+  module.web: 3
+  (root): 1
+types:
+  aws_instance: 2
+  aws_security_group: 1
+  aws_vpc: 1
+estimate: HCP Terraform bills the hourly peak; this is a single snapshot
+```
+
+The diff of that state against `examples/web-stack-next.tfstate` is in `examples/web-stack.diff.txt`. See [examples/README.md](examples/README.md).
+
+## Options
+
+These are all the options of `rum-meter --help`. The commands are `count` and `diff`; both take the options below.
+
+- `--json`: print JSON instead of text.
+- `--explain`: print one line per instance.
+- `--top <N>`: list at most N modules and N resource types.
+- `--prices <FILE>`: read tier prices from this JSON file.
+- `--hours-per-month <N>`: hours in a month for the cost estimate. Only together with `--prices`.
+- `--max-rum <N>`: RUM limit for `count`. Above it the exit code is 1.
+- `--max-increase <N>`: RUM increase limit for `diff`. Above it the exit code is 1.
+- `-h`, `--help`: print help.
+- `-V`, `--version`: print the version.
+
+Every input error says what went wrong and ends with what you can do about it. The details, with exit codes, are in the [reference](docs/reference.md).
+
 ## How it counts
 
 Every number can be traced back to these rules. The address format, the price file and the JSON object are in the [reference](docs/reference.md#how-it-counts).
@@ -302,7 +351,7 @@ The billing page shows the count afterwards. rum-meter reads a file you already 
 
 Where the fixtures come from: [tests/fixtures/README.md](tests/fixtures/README.md).
 
-The suite has 232 automated tests (`cargo test`). [QUALITY.md](QUALITY.md) records the same number.
+The suite has 237 automated tests (`cargo test`). [QUALITY.md](QUALITY.md) records the same number.
 
 ## Privacy
 
@@ -319,7 +368,7 @@ Licensed under either of
 - Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
 - MIT license ([LICENSE-MIT](LICENSE-MIT))
 
-at your option. Copyright 2026 PEPAI.
+at your option. Copyright 2025-2026 PEPAI / Pepijn de Jonge.
 
 Release archives include THIRD-PARTY-LICENSES.html with the licenses of the third-party crates in the binary.
 

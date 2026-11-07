@@ -249,7 +249,9 @@ fn price_1e309_overflows_cleanly_without_inf_or_nan_in_the_message() {
     let stderr = String::from_utf8(output.stderr).expect("utf-8");
     assert_eq!(
         stderr,
-        format!("rum-meter: {prices}: monthly cost overflows\n")
+        format!(
+            "rum-meter: {prices}: monthly cost overflows; check the prices and --hours-per-month\n"
+        )
     );
     assert!(!stderr.to_lowercase().contains("inf"));
     assert!(!stderr.to_lowercase().contains("nan"));

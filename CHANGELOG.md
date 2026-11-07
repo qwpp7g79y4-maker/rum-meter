@@ -6,11 +6,15 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
+- `examples/web-stack.tfstate` and `examples/web-stack-next.tfstate`, two fictional states, with the expected output of `count --explain` and `diff` next to them. `tests/examples_golden.rs` compares the binary's output with those files.
+- `README.md` and `README.nl.md` have an Example and an Options section (Voorbeeld and Opties in Dutch). `tests/readme.rs` checks that every option in `rum-meter --help` is in both.
 - Manual page `man/rum-meter.1`, a fictional state in `examples/one-managed.tfstate`, and `tests/handbook_help.rs`. The test checks the long options in `rum-meter --help` against the manual page and runs the example command.
 
 ### Changed
 
-- README and README.nl state the test count (232), the same number as `QUALITY.md` and `QUALITY.nl.md`.
+- Every input error message now ends with a hint after a semicolon that says what you can do, for example `; pass each state file once`. The text before the semicolon, and every exit code, are unchanged.
+- The copyright line in the licenses and READMEs reads `2025-2026 PEPAI / Pepijn de Jonge`.
+- README and README.nl state the test count (237), the same number as the pre-release section of `QUALITY.md` and `QUALITY.nl.md`.
 
 ### Fixed
 

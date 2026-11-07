@@ -81,7 +81,9 @@ fn two_files_each_under_budget_but_over_combined_is_refused() {
     let stderr = String::from_utf8(counted.stderr).expect("stderr is utf-8");
     assert_eq!(
         stderr,
-        format!("rum-meter: {b}: resource label is repeated across too many instances\n")
+        format!(
+            "rum-meter: {b}: resource label is repeated across too many instances; split the state into smaller files\n"
+        )
     );
 }
 

@@ -6,7 +6,7 @@ Tel factureerbare HCP Terraform-resources in een lokaal statebestand, vóór de 
 
 [![crates.io](https://img.shields.io/crates/v/rum-meter.svg)](https://crates.io/crates/rum-meter) [![downloads](https://img.shields.io/crates/d/rum-meter.svg)](https://crates.io/crates/rum-meter) [![CI](https://github.com/qwpp7g79y4-maker/rum-meter/actions/workflows/ci.yml/badge.svg)](https://github.com/qwpp7g79y4-maker/rum-meter/actions/workflows/ci.yml) [![PEPAI gecontroleerd](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fqwpp7g79y4-maker%2Frum-meter%2Fmain%2F.github%2Fbadge.json)](QUALITY.nl.md) [![MSRV 1.85](https://img.shields.io/badge/MSRV-1.85-blue.svg)](https://github.com/qwpp7g79y4-maker/rum-meter/blob/main/Cargo.toml) [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#licentie)
 
-[Installatie](#installatie) • [Snel aan de slag](#snel-aan-de-slag) • [Hoe het rekent](#hoe-het-rekent) • [Alternatieven](#vergelijking-met-alternatieven) • [Beperkingen](#beperkingen) • [Referentie](docs/reference.nl.md)
+[Installatie](#installatie) • [Snel aan de slag](#snel-aan-de-slag) • [Voorbeeld](#voorbeeld) • [Opties](#opties) • [Hoe het rekent](#hoe-het-rekent) • [Alternatieven](#vergelijking-met-alternatieven) • [Beperkingen](#beperkingen) • [Referentie](docs/reference.nl.md)
 
 rum-meter is een opdrachtregelprogramma in Rust. Het leest `terraform.tfstate`-bestanden van formaatversie 4 en telt factureerbare HCP Terraform Resources Under Management (RUM) volgens de definitie van HashiCorp. Het legt elke instantie uit, splitst het totaal uit per module en per type, schat maandkosten uit een prijsbestand dat je zelf meegeeft, en vergelijkt twee states. Het heeft geen account nodig en maakt geen netwerkverbinding. Het resultaat is een schatting.
 
@@ -254,6 +254,55 @@ Een rapport dat niet naar stdout geschreven kan worden is exit 2, met `rum-meter
 
 Alle opties, exitcodes en foutmeldingen staan in de [referentie](docs/reference.nl.md) en in `rum-meter --help`.
 
+## Voorbeeld
+
+De map `examples/` bevat fictieve states met de verwachte uitvoer. `tests/examples_golden.rs` controleert dat rum-meter precies die uitvoer drukt.
+
+```sh
+rum-meter count --explain examples/web-stack.tfstate
+```
+
+```text
+file: examples/web-stack.tfstate
+rum: 4
+not counted: R2 1, R3 2, R4 0
+  aws_vpc.main counts R1
+  module.web.aws_instance.app[0] counts R1
+  module.web.aws_instance.app[1] counts R1
+  module.web.aws_security_group.app counts R1
+  module.web.data.aws_ami.base does not count R2
+  null_resource.marker does not count R3
+  terraform_data.version does not count R3
+total rum: 4
+not counted: R2 1, R3 2, R4 0
+modules:
+  module.web: 3
+  (root): 1
+types:
+  aws_instance: 2
+  aws_security_group: 1
+  aws_vpc: 1
+estimate: HCP Terraform bills the hourly peak; this is a single snapshot
+```
+
+De diff van die state met `examples/web-stack-next.tfstate` staat in `examples/web-stack.diff.txt`. Zie [examples/README.md](examples/README.md).
+
+## Opties
+
+Dit zijn alle opties uit `rum-meter --help`. De commando's zijn `count` en `diff`; beide nemen de opties hieronder.
+
+- `--json`: druk JSON in plaats van tekst.
+- `--explain`: druk één regel per instance.
+- `--top <N>`: toon hooguit N modules en N resourcetypes.
+- `--prices <FILE>`: lees tierprijzen uit dit JSON-bestand.
+- `--hours-per-month <N>`: uren per maand voor de kostenraming. Alleen samen met `--prices`.
+- `--max-rum <N>`: RUM-limiet voor `count`. Erboven is de exitcode 1.
+- `--max-increase <N>`: limiet voor de RUM-stijging bij `diff`. Erboven is de exitcode 1.
+- `-h`, `--help`: druk de hulptekst.
+- `-V`, `--version`: druk de versie.
+
+Elke invoerfout zegt wat er misging en eindigt met wat je eraan kunt doen. De details, met exitcodes, staan in de [referentie](docs/reference.nl.md).
+
 ## Hoe het rekent
 
 Elk getal is terug te voeren op deze regels. Het adresformaat, het prijsbestand en het JSON-object staan in de [referentie](docs/reference.nl.md#hoe-het-rekent).
@@ -302,7 +351,7 @@ De billingpagina toont de telling achteraf. rum-meter leest een bestand dat je a
 
 Waar de fixtures vandaan komen: [tests/fixtures/README.md](tests/fixtures/README.md).
 
-De suite heeft 232 automatische tests (`cargo test`). [QUALITY.nl.md](QUALITY.nl.md) noemt hetzelfde aantal.
+De suite heeft 237 automatische tests (`cargo test`). [QUALITY.nl.md](QUALITY.nl.md) noemt hetzelfde aantal.
 
 ## Privacy
 
@@ -319,7 +368,7 @@ Naar keuze onder een van deze licenties:
 - Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
 - MIT license ([LICENSE-MIT](LICENSE-MIT))
 
-Copyright 2026 PEPAI.
+Copyright 2025-2026 PEPAI / Pepijn de Jonge.
 
 ## Contact
 

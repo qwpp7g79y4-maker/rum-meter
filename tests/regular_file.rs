@@ -90,7 +90,7 @@ fn assert_not_regular(label: &str, path: &str, output: &Output) {
     );
     assert_eq!(
         stderr,
-        format!("rum-meter: {path}: not a regular file\n"),
+        format!("rum-meter: {path}: not a regular file; pass a regular file, or - to read stdin\n"),
         "{label}"
     );
 }

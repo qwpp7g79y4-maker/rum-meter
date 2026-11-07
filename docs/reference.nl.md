@@ -136,6 +136,8 @@ Tekstrapporten en foutmeldingen escapen stuurtekens, en onzichtbare of tekstrich
 
 ## Exitcodes en gebruiksfouten
 
+Elke exit-2-melding hieronder noemt wat er misging en, na een puntkomma, wat je eraan kunt doen.
+
 | Code | Betekenis |
 | --- | --- |
 | 0 | Gelukt. Een gelijke drempel hoort daarbij. |
@@ -164,21 +166,21 @@ Elke rij hieronder draait tegen de binary. De melding is de hele stderr, en `\n`
 | argumenten | diff | Het nieuwe bestand ontbreekt. | `diff only.json` | 3 | `error: the following required arguments were not provided:\n  <NEW>\n\nUsage: rum-meter diff <OLD> <NEW>\n\nFor more information, try '--help'.\n` |
 | argumenten | topniveau | Onbekende vlag. | `--not-an-option` | 3 | `error: unexpected argument '--not-an-option' found\n\nUsage: rum-meter [OPTIONS] <COMMAND>\n\nFor more information, try '--help'.\n` |
 | `--top` | count | Geen getal. | `count --top abc tests/fixtures/v4_one_managed.json` | 3 | `error: invalid value 'abc' for '--top <N>': invalid digit found in string\n\nFor more information, try '--help'.\n` |
-| statebestand | count | Pad ontbreekt. | `count tests/fixtures/missing.json` | 2 | `rum-meter: tests/fixtures/missing.json: unreadable (not found)\n` |
-| statebestand | count | Een map is geen gewoon bestand. | `count tests/fixtures` | 2 | `rum-meter: tests/fixtures: not a regular file\n` |
-| statebestand | count | Leeg bestand. | `count tests/fixtures/empty.json` | 2 | `rum-meter: tests/fixtures/empty.json: invalid json at line 1 column 0\n` |
-| statebestand | count | Afgekapte JSON. | `count tests/fixtures/broken.json` | 2 | `rum-meter: tests/fixtures/broken.json: invalid json at line 2 column 0\n` |
-| statebestand | count | Versie 3. | `count tests/fixtures/version_3.json` | 2 | `rum-meter: tests/fixtures/version_3.json: state version is not 4\n` |
-| statebestand | count | Versie is tekst, geen getal. | `count tests/fixtures/version_string.json` | 2 | `rum-meter: tests/fixtures/version_string.json: invalid json at line 1 column 33\n` |
-| `--prices` | count | Een statebestand heeft geen valuta. | `count --prices tests/fixtures/v4_one_managed.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/v4_one_managed.json: currency is empty\n` |
-| `--prices` | count | Het prijzenpad is een map. | `count --prices tests/fixtures tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures: not a regular file\n` |
-| `--prices` | count | Het prijsbestand ontbreekt. | `count --prices tests/fixtures/missing-prices.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/missing-prices.json: unreadable (not found)\n` |
-| `--prices` | count | Het prijsbestand is leeg. | `count --prices tests/fixtures/empty.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/empty.json: invalid json at line 1 column 0\n` |
-| `--prices` | count | Twee tiers hebben dezelfde naam. | `count --prices tests/fixtures/dup-tier-prices.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/dup-tier-prices.json: duplicate tier name\n` |
-| statebestand | diff | De oude state is versie 3. | `diff tests/fixtures/version_3.json tests/fixtures/v4_handwritten.json` | 2 | `rum-meter: tests/fixtures/version_3.json: state version is not 4\n` |
-| statebestand | count | Hetzelfde pad twee keer. | `count tests/fixtures/v4_one_managed.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/v4_one_managed.json: state file is given more than once\n` |
-| statebestand | count | Een apparaat is geen gewoon bestand (Linux en macOS). | `count /dev/null` | 2 | `rum-meter: /dev/null: not a regular file\n` |
-| `--prices` | count | Het prijzenpad is een apparaat (Linux en macOS). | `count --prices /dev/null tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: /dev/null: not a regular file\n` |
+| statebestand | count | Pad ontbreekt. | `count tests/fixtures/missing.json` | 2 | `rum-meter: tests/fixtures/missing.json: unreadable (not found); check that the path exists and that you may read it\n` |
+| statebestand | count | Een map is geen gewoon bestand. | `count tests/fixtures` | 2 | `rum-meter: tests/fixtures: not a regular file; pass a regular file, or - to read stdin\n` |
+| statebestand | count | Leeg bestand. | `count tests/fixtures/empty.json` | 2 | `rum-meter: tests/fixtures/empty.json: invalid json at line 1 column 0; fix the file there, or write it again with terraform state pull\n` |
+| statebestand | count | Afgekapte JSON. | `count tests/fixtures/broken.json` | 2 | `rum-meter: tests/fixtures/broken.json: invalid json at line 2 column 0; fix the file there, or write it again with terraform state pull\n` |
+| statebestand | count | Versie 3. | `count tests/fixtures/version_3.json` | 2 | `rum-meter: tests/fixtures/version_3.json: state version is not 4; only state format version 4 is supported\n` |
+| statebestand | count | Versie is tekst, geen getal. | `count tests/fixtures/version_string.json` | 2 | `rum-meter: tests/fixtures/version_string.json: invalid json at line 1 column 33; fix the file there, or write it again with terraform state pull\n` |
+| `--prices` | count | Een statebestand heeft geen valuta. | `count --prices tests/fixtures/v4_one_managed.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/v4_one_managed.json: currency is empty; give a currency such as EUR\n` |
+| `--prices` | count | Het prijzenpad is een map. | `count --prices tests/fixtures tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures: not a regular file; pass a regular file, or - to read stdin\n` |
+| `--prices` | count | Het prijsbestand ontbreekt. | `count --prices tests/fixtures/missing-prices.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/missing-prices.json: unreadable (not found); check that the path exists and that you may read it\n` |
+| `--prices` | count | Het prijsbestand is leeg. | `count --prices tests/fixtures/empty.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/empty.json: invalid json at line 1 column 0; fix the file there, or write it again with terraform state pull\n` |
+| `--prices` | count | Twee tiers hebben dezelfde naam. | `count --prices tests/fixtures/dup-tier-prices.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/dup-tier-prices.json: duplicate tier name; give each tier its own name\n` |
+| statebestand | diff | De oude state is versie 3. | `diff tests/fixtures/version_3.json tests/fixtures/v4_handwritten.json` | 2 | `rum-meter: tests/fixtures/version_3.json: state version is not 4; only state format version 4 is supported\n` |
+| statebestand | count | Hetzelfde pad twee keer. | `count tests/fixtures/v4_one_managed.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/v4_one_managed.json: state file is given more than once; pass each state file once\n` |
+| statebestand | count | Een apparaat is geen gewoon bestand (Linux en macOS). | `count /dev/null` | 2 | `rum-meter: /dev/null: not a regular file; pass a regular file, or - to read stdin\n` |
+| `--prices` | count | Het prijzenpad is een apparaat (Linux en macOS). | `count --prices /dev/null tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: /dev/null: not a regular file; pass a regular file, or - to read stdin\n` |
 
 ## Privacy en veiligheid
 
