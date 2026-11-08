@@ -351,7 +351,7 @@ De billingpagina toont de telling achteraf. rum-meter leest een bestand dat je a
 
 Waar de fixtures vandaan komen: [tests/fixtures/README.md](tests/fixtures/README.md).
 
-De suite heeft 237 automatische tests (`cargo test`). [QUALITY.nl.md](QUALITY.nl.md) noemt hetzelfde aantal.
+De suite heeft 268 automatische tests (`cargo test`). [QUALITY.nl.md](QUALITY.nl.md) noemt hetzelfde aantal.
 
 ## Privacy
 

@@ -351,7 +351,7 @@ The billing page shows the count afterwards. rum-meter reads a file you already 
 
 Where the fixtures come from: [tests/fixtures/README.md](tests/fixtures/README.md).
 
-The suite has 237 automated tests (`cargo test`). [QUALITY.md](QUALITY.md) records the same number.
+The suite has 268 automated tests (`cargo test`). [QUALITY.md](QUALITY.md) records the same number.
 
 ## Privacy
 
