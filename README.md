@@ -318,7 +318,7 @@ These are all the options of `rum-meter --help`. The commands are `count` and `d
 - `--max-increase <N>`: RUM increase limit for `diff`. Above it the exit code is 1.
 - `--quiet`: hide the hint line. No context line. The report stays the same.
 - `--verbose`: print the hint line, and on success one context line on stderr. The report stays the same.
-- `--output <PATH>`: write the report to this file instead of stdout. An existing file is replaced. A missing parent directory is exit 2 and is not created.
+- `--output <PATH>`: write the report to this file instead of stdout. An existing file is replaced. A missing parent directory is exit 2 and is not created. SIGINT is exit 130 and does not leave this file half-written.
 - `-h`, `--help`: print help.
 - `-V`, `--version`: print the version.
 

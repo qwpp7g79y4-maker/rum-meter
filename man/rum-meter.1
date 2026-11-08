@@ -151,6 +151,7 @@ this is a usage error, exit 3.
 .B --output <PATH>
 Write the report to this file instead of stdout.
 An existing file is replaced.
+SIGINT does not leave that file half-written.
 A missing parent directory is exit 2 and is not created.
 Stdout stays empty.
 Exit codes stay 0, 1, 2 and 3.
@@ -238,6 +239,18 @@ A failed write does not panic.
 A usage error.
 An unknown option, a missing argument, and a flag that would not change the report are exit 3.
 Stdout is empty.
+.TP
+.B 130
+Interrupted by SIGINT.
+The process stops and does not panic.
+Exit codes 0, 1, 2 and 3 are unchanged.
+A threshold stays 1.
+A missing output directory stays 2.
+A file larger than 128 MiB stays 2.
+A report written with
+.B --output
+is not left half-written.
+The previous file stays, or the new file is complete.
 .SH EXAMPLES
 .I examples/one-managed.tfstate
 in this repository is a fictional Terraform state of format version 4.

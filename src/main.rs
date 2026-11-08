@@ -9,6 +9,8 @@ use std::process::ExitCode;
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::Shell;
 
+mod interrupt;
+
 const MAX_INCREASE_ONLY_DIFF: &str = "--max-increase only works with diff";
 const MAX_RUM_ONLY_COUNT: &str = "--max-rum only works with count";
 const HOURS_NEEDS_PRICES: &str = "--hours-per-month only works together with --prices";
@@ -147,6 +149,7 @@ enum Commands {
 const STDIN_SENTINEL: &str = "\u{0}";
 
 fn main() -> ExitCode {
+    interrupt::install();
     match Cli::try_parse_from(normalize_stdin_args()) {
         Ok(mut cli) => {
             restore_stdin_paths(&mut cli);
@@ -633,6 +636,11 @@ fn execute(cli: &Cli) -> Result<RunOutcome, CliError> {
 /// An existing file is replaced. A missing parent directory is not created.
 /// That failure is the same exit 2 as a failed write to stdout. A threshold
 /// is still exit 1, and the report is written either way.
+///
+/// The file is written under a temporary name in the same directory and
+/// renamed into place only after the write finishes. SIGINT removes that
+/// temporary name and exits 130, so the destination is never a prefix of the
+/// report. Codes 0, 1, 2 and 3 are unchanged.
 fn write_report(path: Option<&Path>, report: &str) -> Result<(), CliError> {
     let Some(path) = path else {
         let mut stdout = io::stdout().lock();
@@ -641,14 +649,101 @@ fn write_report(path: Option<&Path>, report: &str) -> Result<(), CliError> {
             .and_then(|()| stdout.flush())
             .map_err(|_| CliError::Output);
     };
-    let mut file = std::fs::File::create(path).map_err(|_| CliError::ReportFile {
+    write_report_file(path, report)
+}
+
+/// Same directory as `path`, so the rename that publishes the report is atomic.
+fn partial_report_path(path: &Path) -> Option<PathBuf> {
+    let name = path.file_name()?;
+    if name.is_empty() {
+        return None;
+    }
+    let mut partial_name = name.to_os_string();
+    partial_name.push(format!(".rum-meter-{}.partial", std::process::id()));
+    Some(path.with_file_name(partial_name))
+}
+
+/// `count --output missing/report.txt` must not create `missing`.
+fn parent_is_missing(path: &Path) -> bool {
+    match path.parent() {
+        Some(parent) if !parent.as_os_str().is_empty() => !parent.is_dir(),
+        _ => false,
+    }
+}
+
+fn abandon_partial(partial: &Path) {
+    let _ = std::fs::remove_file(partial);
+    interrupt::clear_partial();
+}
+
+fn write_report_file(path: &Path, report: &str) -> Result<(), CliError> {
+    let fail = || CliError::ReportFile {
         path: path.to_path_buf(),
-    })?;
-    file.write_all(report.as_bytes())
-        .and_then(|()| file.flush())
-        .map_err(|_| CliError::ReportFile {
-            path: path.to_path_buf(),
-        })
+    };
+    let Some(partial) = partial_report_path(path) else {
+        return Err(fail());
+    };
+    if parent_is_missing(path) {
+        return Err(fail());
+    }
+    if !interrupt::publish_partial(&partial) {
+        return Err(fail());
+    }
+    let opened = open_partial(&partial);
+    let mut file = match opened {
+        Ok(file) => file,
+        Err(_) => {
+            abandon_partial(&partial);
+            return Err(fail());
+        }
+    };
+    let written = file
+        .write_all(report.as_bytes())
+        .and_then(|()| file.flush());
+    // Close before the rename, so the published file is the full report.
+    drop(file);
+    if written.is_err() {
+        abandon_partial(&partial);
+        return Err(fail());
+    }
+    if interrupt::replace_report(&partial, path).is_err() {
+        abandon_partial(&partial);
+        return Err(fail());
+    }
+    interrupt::clear_partial();
+    Ok(())
+}
+
+/// `O_NOFOLLOW` so a symlink planted at the temporary name is not truncated.
+#[cfg(unix)]
+fn open_partial(path: &Path) -> std::io::Result<std::fs::File> {
+    use std::os::unix::fs::OpenOptionsExt;
+
+    std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .custom_flags(o_nofollow())
+        .open(path)
+}
+
+#[cfg(any(target_os = "linux", target_os = "android"))]
+fn o_nofollow() -> i32 {
+    0o400000
+}
+
+#[cfg(all(unix, not(any(target_os = "linux", target_os = "android"))))]
+fn o_nofollow() -> i32 {
+    0x100
+}
+
+#[cfg(not(unix))]
+fn open_partial(path: &Path) -> std::io::Result<std::fs::File> {
+    std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(path)
 }
 
 /// `--max-rum` compared with the summed count. A total that does not fit in `u64` is over every limit.
