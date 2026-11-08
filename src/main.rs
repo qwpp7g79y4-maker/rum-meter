@@ -25,12 +25,16 @@ const USAGE_HELP: &str = "\
 --top with diff only works together with --json
 --explain with diff only works together with --json";
 
+// Debug: crate version, plus the git sha when git itself printed one.
+// Release: crate version only. See `build.rs`.
+include!(concat!(env!("OUT_DIR"), "/display_version.rs"));
+
 #[derive(Parser)]
 // `bin_name` keeps usage lines at `rum-meter`, also as `rum-meter.exe` on Windows.
 #[command(
     name = "rum-meter",
     bin_name = "rum-meter",
-    version,
+    version = DISPLAY_VERSION,
     about = "Estimate billable HCP Terraform RUM from local state files",
     after_help = USAGE_HELP
 )]
