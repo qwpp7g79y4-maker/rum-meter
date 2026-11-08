@@ -21,6 +21,8 @@ A flag that would not change the report is exit 3, with one fixed line on stderr
 | `--hours-per-month` | count and diff, only together with `--prices` | Hours in the month used for the estimate. Default 730. |
 | `--max-rum` | count | Exit 1 when the summed RUM is above N. N itself is within the limit. The report is still printed. |
 | `--max-increase` | diff | Exit 1 when new RUM minus old RUM is above N. An equal delta is within the limit. A decrease is within every limit. The report is still printed. |
+| `--quiet` | count and diff | Hide the hint line, also on a terminal. No context line. Stdout is unchanged. |
+| `--verbose` | count and diff | Print the hint line even when stderr is a pipe, and on success one `context:` line on stderr. Stdout is unchanged. Together with `--quiet` this is exit 3. |
 | `--help` | everywhere | Show help and exit 0. `-h` is the short form. |
 | `--version` | top level | Show `rum-meter 1.0.0` and exit 0. `-V` is the short form. |
 

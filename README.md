@@ -316,6 +316,8 @@ These are all the options of `rum-meter --help`. The commands are `count` and `d
 - `--hours-per-month <N>`: hours in a month for the cost estimate. Only together with `--prices`.
 - `--max-rum <N>`: RUM limit for `count`. Above it the exit code is 1.
 - `--max-increase <N>`: RUM increase limit for `diff`. Above it the exit code is 1.
+- `--quiet`: hide the hint line. No context line. The report stays the same.
+- `--verbose`: print the hint line, and on success one context line on stderr. The report stays the same.
 - `-h`, `--help`: print help.
 - `-V`, `--version`: print the version.
 

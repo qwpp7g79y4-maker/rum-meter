@@ -23,6 +23,8 @@ Een vlag die het rapport niet zou veranderen is exit 3, met één vaste regel op
 | `--hours-per-month` | count en diff, alleen samen met `--prices` | Uren in de maand voor de schatting. Standaard 730. |
 | `--max-rum` | count | Exit 1 als de opgetelde RUM boven N ligt. N zelf valt binnen de grens. Het rapport wordt toch afgedrukt. |
 | `--max-increase` | diff | Exit 1 als nieuwe RUM min oude RUM boven N ligt. Een gelijke delta valt binnen de grens. Een daling valt binnen elke grens. Het rapport wordt toch afgedrukt. |
+| `--quiet` | count en diff | Verberg de hintregel, ook op een terminal. Geen contextregel. Stdout blijft gelijk. |
+| `--verbose` | count en diff | Druk de hintregel ook als stderr een pipe is, en bij succes één regel `context:` op stderr. Stdout blijft gelijk. Samen met `--quiet` is dit exit 3. |
 | `--help` | overal | Toon de hulp en exit 0. `-h` is de korte vorm. |
 | `--version` | alleen het topniveau | Toon `rum-meter 1.0.0` en exit 0. `-V` is de korte vorm. |
 

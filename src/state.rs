@@ -209,6 +209,22 @@ impl fmt::Display for LoadError {
     }
 }
 
+impl LoadError {
+    /// Next step, shown only with extra context (`--verbose` or a terminal).
+    /// The text has no path and no bytes from the file.
+    pub fn hint(&self) -> &'static str {
+        match self {
+            Self::Unreadable { .. } => "check that the path exists and that you may read it",
+            Self::NotRegular { .. } => "pass a regular file, or - to read stdin",
+            Self::TooLarge { .. } => "pass a smaller file",
+            Self::InvalidJson { .. } => "fix the JSON at the reported line and column",
+            Self::UnsupportedVersion { .. } => "write the state again with terraform state pull",
+            Self::NotObject { .. } => "pass one JSON object, not an array",
+            Self::NotUtf8 { .. } => "save the file as UTF-8",
+        }
+    }
+}
+
 impl std::error::Error for LoadError {}
 
 /// Read one state file. The error text is only the path, the error kind, and

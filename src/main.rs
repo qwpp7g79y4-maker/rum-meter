@@ -1,7 +1,8 @@
+use std::cell::Cell;
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::fmt;
-use std::io::{self, Write};
+use std::io::{self, IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
@@ -68,8 +69,45 @@ struct Cli {
     #[arg(long, global = true, value_name = "N")]
     max_increase: Option<u64>,
 
+    /// Hide the hint line. No context line.
+    #[arg(long, global = true, conflicts_with = "verbose")]
+    quiet: bool,
+
+    /// Print the hint line, and on success one context line on stderr.
+    #[arg(long, global = true, conflicts_with = "quiet")]
+    verbose: bool,
+
     #[command(subcommand)]
     command: Commands,
+}
+
+thread_local! {
+    /// Hint lines. A terminal shows them. A pipe does not, unless `--verbose`.
+    static EXTRA: Cell<bool> = const { Cell::new(false) };
+}
+
+fn set_extra(extra: bool) {
+    EXTRA.with(|cell| cell.set(extra));
+}
+
+fn extra() -> bool {
+    EXTRA.with(|cell| cell.get())
+}
+
+/// `--quiet` hides hints even on a terminal. `--verbose` shows them even on a pipe.
+/// Both flags together are a clap usage error and never reach a report.
+fn show_extra(quiet: bool, verbose: bool) -> bool {
+    show_extra_on(quiet, verbose, io::stderr().is_terminal())
+}
+
+fn show_extra_on(quiet: bool, verbose: bool, terminal: bool) -> bool {
+    if quiet {
+        false
+    } else if verbose {
+        true
+    } else {
+        terminal
+    }
 }
 
 #[derive(Subcommand)]
@@ -108,6 +146,7 @@ fn main() -> ExitCode {
     match Cli::try_parse_from(normalize_stdin_args()) {
         Ok(mut cli) => {
             restore_stdin_paths(&mut cli);
+            set_extra(show_extra(cli.quiet, cli.verbose));
             if let Commands::Completions { shell } = &cli.command {
                 return write_completions(shell);
             }
@@ -116,10 +155,20 @@ fn main() -> ExitCode {
                 return ExitCode::from(3);
             }
             match execute(&cli) {
-                Ok(RunOutcome::Success) => ExitCode::SUCCESS,
-                Ok(RunOutcome::ThresholdExceeded) => ExitCode::from(1),
+                Ok(RunOutcome::Success { context }) => {
+                    if cli.verbose {
+                        write_stderr_line(&format!("context: {context}"));
+                    }
+                    ExitCode::SUCCESS
+                }
+                Ok(RunOutcome::ThresholdExceeded { hint }) => {
+                    if extra() {
+                        write_stderr_line(&format!("hint: {hint}"));
+                    }
+                    ExitCode::from(1)
+                }
                 Err(err) => {
-                    write_stderr_line(&err.to_string());
+                    write_stderr_hint(&err.to_string(), err.hint());
                     ExitCode::from(2)
                 }
             }
@@ -224,6 +273,18 @@ fn write_stderr_line(message: &str) {
     let _ = stderr.flush();
 }
 
+/// Writes an error line, then a `hint:` line when extra context is on.
+///
+/// Extra context is on for a terminal and for `--verbose`. A pipe, a redirect,
+/// and `--quiet` keep the first line only, so captured stderr stays one line.
+fn write_stderr_hint(message: &str, hint: &str) {
+    if extra() {
+        write_stderr_line(&format!("{message}\nhint: {hint}"));
+    } else {
+        write_stderr_line(message);
+    }
+}
+
 enum CliError {
     State(rum_meter::state::LoadError),
     Prices(rum_meter::cost::PriceError),
@@ -269,6 +330,20 @@ impl fmt::Display for CliError {
                 )
             }
             Self::Output => f.write_str("rum-meter: cannot write report to stdout; check that stdout is open and the disk is not full"),
+        }
+    }
+}
+
+impl CliError {
+    fn hint(&self) -> &'static str {
+        match self {
+            Self::State(err) => err.hint(),
+            Self::Prices(err) => err.hint(),
+            Self::DuplicateAddress { .. } => "remove the repeat or do not pass overlapping states",
+            Self::LabelTooLarge { .. } => "split the state into smaller files",
+            Self::RepeatedPath { .. } => "pass each state file once",
+            Self::CostOverflow { .. } => "check the prices and --hours-per-month",
+            Self::Output => "check that stdout is open and the disk is not full",
         }
     }
 }
@@ -353,10 +428,11 @@ fn reject_repeated_address(
     Ok(())
 }
 
-/// Result of a report that was printed. A threshold breach is exit 1, not an error line.
+/// Result of a report that was printed. A threshold breach is exit 1.
+/// The report is unchanged. A pipe writes nothing about the breach.
 enum RunOutcome {
-    Success,
-    ThresholdExceeded,
+    Success { context: String },
+    ThresholdExceeded { hint: &'static str },
 }
 
 /// A flag that would not change the report. Exit 3, before any file is opened.
@@ -446,9 +522,13 @@ fn execute(cli: &Cli) -> Result<RunOutcome, CliError> {
             Ok(outcome(
                 cli.max_rum
                     .is_some_and(|max_rum| count_exceeds(rum, max_rum)),
+                format!("states {}, rum {rum}", files.len()),
+                "the summed RUM is above --max-rum; the report is unchanged",
             ))
         }
-        Commands::Completions { .. } => Ok(RunOutcome::Success),
+        Commands::Completions { .. } => Ok(RunOutcome::Success {
+            context: String::new(),
+        }),
         Commands::Diff { old, new } => {
             let prices = match &cli.prices {
                 Some(path) => Some((
@@ -510,9 +590,12 @@ fn execute(cli: &Cli) -> Result<RunOutcome, CliError> {
                 rum_meter::render::render_diff_text(old, new, &diff, &cost_deltas)
             };
             write_report(&report)?;
-            Ok(outcome(cli.max_increase.is_some_and(|max_increase| {
-                increase_exceeds(diff.rum_delta(), max_increase)
-            })))
+            Ok(outcome(
+                cli.max_increase
+                    .is_some_and(|max_increase| increase_exceeds(diff.rum_delta(), max_increase)),
+                format!("rum {} -> {}", diff.old_rum, diff.new_rum),
+                "the RUM increase is above --max-increase; the report is unchanged",
+            ))
         }
     }
 }
@@ -542,10 +625,24 @@ fn increase_exceeds(delta: i64, max_increase: u64) -> bool {
     }
 }
 
-fn outcome(exceeded: bool) -> RunOutcome {
+fn outcome(exceeded: bool, context: String, hint: &'static str) -> RunOutcome {
     if exceeded {
-        RunOutcome::ThresholdExceeded
+        RunOutcome::ThresholdExceeded { hint }
     } else {
-        RunOutcome::Success
+        RunOutcome::Success { context }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::show_extra_on;
+
+    #[test]
+    fn extra_context_follows_the_terminal_unless_a_flag_is_set() {
+        assert!(!show_extra_on(false, false, false));
+        assert!(show_extra_on(false, false, true));
+        assert!(show_extra_on(false, true, false));
+        assert!(!show_extra_on(true, false, true));
+        assert!(!show_extra_on(true, true, true));
     }
 }

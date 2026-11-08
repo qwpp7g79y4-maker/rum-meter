@@ -136,6 +136,18 @@ The exit status is 1 when new RUM minus old RUM is greater than N.
 An equal increase is success.
 A decrease is success.
 .TP
+.B --quiet
+Hide the hint line.
+No context line.
+The report on stdout is unchanged.
+.TP
+.B --verbose
+Print the hint line, and on success one context line on stderr.
+The report on stdout is unchanged.
+Together with
+.B --quiet
+this is a usage error, exit 3.
+.TP
 .B -h, --help
 Print help.
 .TP

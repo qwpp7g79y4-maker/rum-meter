@@ -68,6 +68,15 @@ enum Expect {
         with: &'static [&'static str],
         files: &'static [&'static str],
     },
+    /// Exit 0. Stdout stays the same. Stderr gains one `context:` line.
+    Stderr {
+        baseline: &'static [&'static str],
+        with: &'static [&'static str],
+        files: &'static [&'static str],
+    },
+    /// Alone, stdout matches a run without the flag and stderr stays empty.
+    /// Together with `--verbose`, exit 3. That is a usage error, not exit 1.
+    ConflictsVerbose { files: &'static [&'static str] },
 }
 
 const CASES: &[(&str, Case)] = &[
@@ -216,6 +225,28 @@ const CASES: &[(&str, Case)] = &[
             },
         },
     ),
+    (
+        "--quiet",
+        Case {
+            count: Expect::ConflictsVerbose { files: COUNT_FILES },
+            diff: Expect::ConflictsVerbose { files: DIFF_FILES },
+        },
+    ),
+    (
+        "--verbose",
+        Case {
+            count: Expect::Stderr {
+                baseline: &[],
+                with: &["--verbose"],
+                files: COUNT_FILES,
+            },
+            diff: Expect::Stderr {
+                baseline: &[],
+                with: &["--verbose"],
+                files: DIFF_FILES,
+            },
+        },
+    ),
 ];
 
 fn binary() -> Command {
@@ -339,7 +370,9 @@ fn files_of(expect: &Expect) -> &'static [&'static str] {
         Expect::Output { files, .. }
         | Expect::ExitCode { files, .. }
         | Expect::Refuse { files, .. }
-        | Expect::Together { files, .. } => files,
+        | Expect::Together { files, .. }
+        | Expect::Stderr { files, .. }
+        | Expect::ConflictsVerbose { files } => files,
     }
 }
 
@@ -387,6 +420,67 @@ fn check(help: &str, sub: &str, option: &str, expect: &Expect) -> Option<String>
                 files,
             },
         ),
+        Expect::Stderr {
+            baseline,
+            with,
+            files,
+        } => {
+            if !has_flag(with, option) || has_flag(baseline, option) {
+                return Some(format!("{option} belongs only in the `with` call"));
+            }
+            if let Some(error) = reject_other_options(option, with) {
+                return Some(error);
+            }
+            let left = run(sub, baseline, files);
+            let right = run(sub, with, files);
+            if let Some(err) = no_canary(&left).or_else(|| no_canary(&right)) {
+                return Some(err);
+            }
+            if left.code != Some(0)
+                || right.code != Some(0)
+                || left.stdout != right.stdout
+                || left.stderr == right.stderr
+                || !right.stderr.starts_with("context: ")
+                || right.stderr.lines().count() != 1
+            {
+                Some(format!(
+                    "stderr did not gain context: baseline status={:?} stderr={} with status={:?} stderr={}",
+                    left.code,
+                    left.stderr.len(),
+                    right.code,
+                    right.stderr.len()
+                ))
+            } else {
+                None
+            }
+        }
+        Expect::ConflictsVerbose { files } => {
+            let alone = run(sub, &[option], files);
+            let both = run(sub, &[option, "--verbose"], files);
+            let plain = run(sub, &[], files);
+            if let Some(err) = no_canary(&alone)
+                .or_else(|| no_canary(&both))
+                .or_else(|| no_canary(&plain))
+            {
+                return Some(err);
+            }
+            if alone.code != Some(0)
+                || alone.stdout != plain.stdout
+                || !alone.stderr.is_empty()
+                || both.code != Some(3)
+                || !both.stdout.is_empty()
+            {
+                Some(format!(
+                    "quiet: alone status={:?} stderr={} both status={:?} stderr={}",
+                    alone.code,
+                    alone.stderr.len(),
+                    both.code,
+                    both.stderr.len()
+                ))
+            } else {
+                None
+            }
+        }
     }
 }
 

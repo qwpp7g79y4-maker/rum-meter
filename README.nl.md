@@ -318,6 +318,8 @@ Dit zijn alle opties uit `rum-meter --help`. De commando's zijn `count` en `diff
 - `--hours-per-month <N>`: uren per maand voor de kostenraming. Alleen samen met `--prices`.
 - `--max-rum <N>`: RUM-limiet voor `count`. Erboven is de exitcode 1.
 - `--max-increase <N>`: limiet voor de RUM-stijging bij `diff`. Erboven is de exitcode 1.
+- `--quiet`: verberg de hintregel. Geen contextregel. Het rapport blijft hetzelfde.
+- `--verbose`: druk de hintregel, en bij succes één contextregel op stderr. Het rapport blijft hetzelfde.
 - `-h`, `--help`: druk de hulptekst.
 - `-V`, `--version`: druk de versie.
 
