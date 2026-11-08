@@ -11,6 +11,19 @@ This page shows how each release of rum-meter was checked before it was publishe
 | Tests | 251 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debug mode) |
 | Lints | `cargo fmt --check` and `cargo clippy --all-targets -- -D warnings` clean |
 
+## Measured time on a 100 MiB input (pre-release 1.0.0)
+
+| | |
+|---|---|
+| Date | 2026-11-08 |
+| Commit measured | `bfad48b` (branch prep/w24-fout) |
+| Build | `cargo build --release` |
+| Input | One synthetic Terraform state, 104857600 bytes (exactly 100 MiB), format version 4 as in `examples/`: 492,809 managed `aws_instance` resources, one instance each. The resource entries are almost identical: only the name and the instance id change. The file is generated in `/tmp` and is not committed. |
+| Command | `/usr/bin/time -f "%e s" target/release/rum-meter count big.tfstate` (exit 0, 492809 RUM) |
+| Measured | 0.85 s, 0.86 s, 0.86 s (three runs, elapsed wall-clock seconds) |
+
+This is one machine and one input shape. Real states differ, so it is not a promise for other inputs. No throughput figure is given.
+
 ## v0.1.2
 
 | | |
