@@ -2,11 +2,11 @@
 
 This page shows how each release of rum-meter was checked before it was published, what we found, and what we fixed. It describes checks we did. It is not a guarantee that the software is free of bugs or secure.
 
-## Pre-release 0.1.3 (branch prep/v1-kwaliteit)
+## Pre-release 1.0.0 (branch prep/v1-kwaliteit)
 
 | | |
 |---|---|
-| Version | 0.1.3 (not published from this branch) |
+| Version | 1.0.0 (not published from this branch) |
 | Commit measured | `7e26916` |
 | Tests | 268 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debug mode) |
 | Lints | `cargo fmt --check` and `cargo clippy --all-targets -- -D warnings` clean |
