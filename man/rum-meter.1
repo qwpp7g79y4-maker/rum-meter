@@ -167,6 +167,14 @@ If several apply, the first of these wins:
 --top with diff only works together with --json
 --explain with diff only works together with --json
 .fi
+.SH COMPLETIONS
+.B rum-meter completions bash
+and
+.B rum-meter completions zsh
+write a completion script for that shell to stdout and exit 0.
+The subcommand is not listed in
+.BR rum-meter\ --help .
+Any other shell name is a usage error, exit 3.
 .SH "EXIT STATUS"
 .TP
 .B 0

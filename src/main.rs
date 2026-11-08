@@ -5,7 +5,8 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
+use clap_complete::Shell;
 
 const MAX_INCREASE_ONLY_DIFF: &str = "--max-increase only works with diff";
 const MAX_RUM_ONLY_COUNT: &str = "--max-rum only works with count";
@@ -90,6 +91,13 @@ enum Commands {
         #[arg(value_name = "NEW")]
         new: PathBuf,
     },
+    /// Write a shell completion script to stdout
+    #[command(hide = true)]
+    Completions {
+        /// Shell to generate for: bash or zsh
+        #[arg(value_name = "SHELL", value_parser = ["bash", "zsh"])]
+        shell: String,
+    },
 }
 
 /// Clap rejects a bare `-`. Rewrite only that token, and not the value of an
@@ -100,6 +108,9 @@ fn main() -> ExitCode {
     match Cli::try_parse_from(normalize_stdin_args()) {
         Ok(mut cli) => {
             restore_stdin_paths(&mut cli);
+            if let Commands::Completions { shell } = &cli.command {
+                return write_completions(shell);
+            }
             if let Some(message) = refused_option(&cli) {
                 write_stderr_line(message);
                 return ExitCode::from(3);
@@ -115,6 +126,23 @@ fn main() -> ExitCode {
         }
         Err(err) => clap_exit(err),
     }
+}
+
+/// Writes the completion script for `shell` to stdout. A failed write is exit 2.
+fn write_completions(shell: &str) -> ExitCode {
+    let shell = if shell == "bash" {
+        Shell::Bash
+    } else {
+        Shell::Zsh
+    };
+    let mut buffer = Vec::new();
+    clap_complete::generate(shell, &mut Cli::command(), "rum-meter", &mut buffer);
+    let mut out = io::stdout().lock();
+    if out.write_all(&buffer).and_then(|()| out.flush()).is_err() {
+        write_stderr_line("rum-meter: cannot write message to stdout");
+        return ExitCode::from(2);
+    }
+    ExitCode::SUCCESS
 }
 
 fn normalize_stdin_args() -> Vec<OsString> {
@@ -157,6 +185,7 @@ fn restore_stdin_paths(cli: &mut Cli) {
             restore(old);
             restore(new);
         }
+        Commands::Completions { .. } => {}
     }
 }
 
@@ -419,6 +448,7 @@ fn execute(cli: &Cli) -> Result<RunOutcome, CliError> {
                     .is_some_and(|max_rum| count_exceeds(rum, max_rum)),
             ))
         }
+        Commands::Completions { .. } => Ok(RunOutcome::Success),
         Commands::Diff { old, new } => {
             let prices = match &cli.prices {
                 Some(path) => Some((

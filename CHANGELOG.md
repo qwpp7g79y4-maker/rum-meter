@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
+- `rum-meter completions bash|zsh` writes a shell completion script to stdout. The subcommand is hidden from `--help`. Uses `clap_complete` (rust-version 1.85, same as this package). Tests in `tests/completions.rs`.
 - `--markdown` and `--html` print a Markdown or a self-contained HTML report for `count` and `diff`, next to text and `--json`. The three format flags exclude each other (exit 3). Snapshot tests in `tests/report_formats.rs`.
 
 ### Changed
