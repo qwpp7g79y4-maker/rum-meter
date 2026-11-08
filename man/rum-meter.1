@@ -86,6 +86,20 @@ and is accepted on the top level only.
 .B --json
 Print JSON instead of text.
 .TP
+.B --markdown
+Print a Markdown report instead of text.
+Cannot be combined with
+.B --json
+or
+.BR --html .
+.TP
+.B --html
+Print a self-contained HTML report instead of text.
+Cannot be combined with
+.B --json
+or
+.BR --markdown .
+.TP
 .B --explain
 Print one line per instance.
 On

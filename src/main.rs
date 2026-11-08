@@ -35,6 +35,14 @@ struct Cli {
     #[arg(long, global = true)]
     json: bool,
 
+    /// Print a Markdown report instead of text
+    #[arg(long, global = true, conflicts_with_all = ["json", "html"])]
+    markdown: bool,
+
+    /// Print a self-contained HTML report instead of text
+    #[arg(long, global = true, conflicts_with_all = ["json", "markdown"])]
+    html: bool,
+
     /// Print one line per instance
     #[arg(long, global = true)]
     explain: bool,
@@ -398,6 +406,10 @@ fn execute(cli: &Cli) -> Result<RunOutcome, CliError> {
             };
             let report = if cli.json {
                 rum_meter::render::render_count_json(&files, cli.explain, cli.top, &costs)
+            } else if cli.markdown {
+                rum_meter::doc::render_count_markdown(&files, cli.explain, cli.top, &costs)
+            } else if cli.html {
+                rum_meter::doc::render_count_html(&files, cli.explain, cli.top, &costs)
             } else {
                 rum_meter::render::render_count_text(&files, cli.explain, cli.top, &costs)
             };
@@ -460,6 +472,10 @@ fn execute(cli: &Cli) -> Result<RunOutcome, CliError> {
                     cli.explain,
                     cli.top,
                 )
+            } else if cli.markdown {
+                rum_meter::doc::render_diff_markdown(old, new, &diff, &cost_deltas)
+            } else if cli.html {
+                rum_meter::doc::render_diff_html(old, new, &diff, &cost_deltas)
             } else {
                 rum_meter::render::render_diff_text(old, new, &diff, &cost_deltas)
             };

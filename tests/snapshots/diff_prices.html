@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>rum-meter diff</title>
+<style>body{font-family:sans-serif;max-width:60rem;margin:2rem auto;padding:0 1rem}table{border-collapse:collapse;margin-bottom:1rem}th,td{border:1px solid #888;padding:.25rem .6rem;text-align:left}th{background:#eee}</style>
+</head>
+<body>
+<h1>rum-meter diff</h1>
+<p>Old: tests/fixtures/v4_diff_old.json</p>
+<p>New: tests/fixtures/v4_diff_new.json</p>
+<p>RUM: 6 -&gt; 4</p>
+<p>RUM delta: -2</p>
+<h2>Added</h2>
+<table>
+<thead><tr><th>Address</th></tr></thead>
+<tbody>
+<tr><td>random_id.servers[1]</td></tr>
+</tbody>
+</table>
+<h2>Removed</h2>
+<table>
+<thead><tr><th>Address</th></tr></thead>
+<tbody>
+<tr><td>local_file.note</td></tr>
+<tr><td>module.child.random_id.labeled[&quot;gone&quot;]</td></tr>
+<tr><td>random_id.marker</td></tr>
+</tbody>
+</table>
+<h2>Changed rule</h2>
+<p>none</p>
+<h2>Cost delta</h2>
+<table>
+<thead><tr><th>Tier</th><th>Currency</th><th>Amount</th></tr></thead>
+<tbody>
+<tr><td>example-a</td><td>EUR</td><td>-1460.00</td></tr>
+<tr><td>example-b</td><td>EUR</td><td>-730.00</td></tr>
+</tbody>
+</table>
+<p>Estimate: HCP Terraform bills the hourly peak; this is a single snapshot</p>
+</body>
+</html>

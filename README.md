@@ -292,6 +292,8 @@ The diff of that state against `examples/web-stack-next.tfstate` is in `examples
 These are all the options of `rum-meter --help`. The commands are `count` and `diff`; both take the options below.
 
 - `--json`: print JSON instead of text.
+- `--markdown`: print a Markdown report instead of text.
+- `--html`: print a self-contained HTML report instead of text.
 - `--explain`: print one line per instance.
 - `--top <N>`: list at most N modules and N resource types.
 - `--prices <FILE>`: read tier prices from this JSON file.
@@ -351,7 +353,7 @@ The billing page shows the count afterwards. rum-meter reads a file you already 
 
 Where the fixtures come from: [tests/fixtures/README.md](tests/fixtures/README.md).
 
-The suite has 237 automated tests (`cargo test`). [QUALITY.md](QUALITY.md) records the same number.
+The suite has 250 automated tests (`cargo test`). [QUALITY.md](QUALITY.md) records the same number.
 
 ## Privacy
 

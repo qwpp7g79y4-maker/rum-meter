@@ -13,6 +13,8 @@ A flag that would not change the report is exit 3, with one fixed line on stderr
 | Option | Applies to | What it does |
 | --- | --- | --- |
 | `--json` | count and diff | Print one JSON object instead of text. `schema_version` is 1. |
+| `--markdown` | count and diff | Print a Markdown report instead of text. Cannot be combined with `--json` or `--html` (exit 3). On diff, `--explain` and `--top` still need `--json`. |
+| `--html` | count and diff | Print a self-contained HTML page (no scripts, no external resources) instead of text. Cannot be combined with `--json` or `--markdown` (exit 3). On diff, `--explain` and `--top` still need `--json`. |
 | `--explain` | count; on diff only together with `--json` | One line per instance: the address, `counts` or `does not count`, and the rule code. A tainted object appends ` tainted`. |
 | `--top` | count; on diff only together with `--json` | Keep at most N module rows and N type rows. The rest is one row `other`, or `(other)` when that name is already taken. |
 | `--prices` | count and diff | Read tier prices from this JSON file. Without it there is no cost line. |

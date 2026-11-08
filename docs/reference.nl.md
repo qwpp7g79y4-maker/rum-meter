@@ -15,6 +15,8 @@ Een vlag die het rapport niet zou veranderen is exit 3, met één vaste regel op
 | Optie | Werkt bij | Wat het doet |
 | --- | --- | --- |
 | `--json` | count en diff | Eén JSON-object in plaats van tekst. `schema_version` is 1. |
+| `--markdown` | count en diff | Een Markdown-rapport in plaats van tekst. Niet te combineren met `--json` of `--html` (exit 3). Bij diff hebben `--explain` en `--top` nog steeds `--json` nodig. |
+| `--html` | count en diff | Een zelfstandige HTML-pagina (geen scripts, geen externe bronnen) in plaats van tekst. Niet te combineren met `--json` of `--markdown` (exit 3). Bij diff hebben `--explain` en `--top` nog steeds `--json` nodig. |
 | `--explain` | count; bij diff alleen samen met `--json` | Eén regel per instantie: het adres, `counts` of `does not count`, en de regelcode. Een tainted object krijgt er ` tainted` bij. |
 | `--top` | count; bij diff alleen samen met `--json` | Hoogstens N modulerijen en N typerijen. De rest is één rij `other`, of `(other)` als die naam al bezet is. |
 | `--prices` | count en diff | Lees tierprijzen uit dit JSON-bestand. Zonder dit bestand is er geen kostenregel. |

@@ -1,5 +1,6 @@
 pub mod cost;
 pub mod diff;
+pub mod doc;
 pub mod encoding;
 mod regular;
 pub mod render;

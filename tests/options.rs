@@ -87,6 +87,36 @@ const CASES: &[(&str, Case)] = &[
         },
     ),
     (
+        "--markdown",
+        Case {
+            count: Expect::Output {
+                baseline: &[],
+                with: &["--markdown"],
+                files: COUNT_FILES,
+            },
+            diff: Expect::Output {
+                baseline: &[],
+                with: &["--markdown"],
+                files: DIFF_FILES,
+            },
+        },
+    ),
+    (
+        "--html",
+        Case {
+            count: Expect::Output {
+                baseline: &[],
+                with: &["--html"],
+                files: COUNT_FILES,
+            },
+            diff: Expect::Output {
+                baseline: &[],
+                with: &["--html"],
+                files: DIFF_FILES,
+            },
+        },
+    ),
+    (
         "--explain",
         Case {
             count: Expect::Output {
