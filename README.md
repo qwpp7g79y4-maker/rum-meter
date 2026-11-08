@@ -41,6 +41,22 @@ From a local clone: `cargo install --locked --path .`, or `cargo build --release
 
 The binaries are built and smoke-tested on GitHub runners (Ubuntu, macOS on Apple Silicon and Intel, Windows). Building from source needs Rust 1.85 or newer on any platform Rust supports.
 
+## Aan de slag in 5 minuten
+
+Install rum-meter as in Installation and put it on your `PATH`. Run the
+commands below from the repository root. They read the fictional state files in
+`examples/`: no network, no HCP Terraform account, no file from this machine.
+The test `tests/readme_quickstart.rs` runs these lines literally.
+
+```sh
+rum-meter count examples/one-managed.tfstate
+rum-meter count --explain examples/web-stack.tfstate
+rum-meter diff examples/web-stack.tfstate examples/web-stack-next.tfstate
+```
+
+Each command exits 0. Their output is stored in `examples/one-managed.count.txt`,
+`examples/web-stack.count.txt` and `examples/web-stack.diff.txt`.
+
 ## Quick start
 
 A state argument `-` reads stdin. Any other state path is a file path, not a pipe or stdin (see [Limitations](#limitations)).
@@ -353,7 +369,7 @@ The billing page shows the count afterwards. rum-meter reads a file you already 
 
 Where the fixtures come from: [tests/fixtures/README.md](tests/fixtures/README.md).
 
-The suite has 250 automated tests (`cargo test`). [QUALITY.md](QUALITY.md) records the same number.
+The suite has 251 automated tests (`cargo test`). [QUALITY.md](QUALITY.md) records the same number.
 
 ## Privacy
 

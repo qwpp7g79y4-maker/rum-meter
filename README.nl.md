@@ -43,6 +43,24 @@ Vanuit een lokale clone: `cargo install --locked --path .`, of `cargo build --re
 
 De binaries worden gebouwd en met een rooktest gecontroleerd op runners van GitHub (Ubuntu, macOS op Apple Silicon en Intel, Windows). Bouwen vanuit de broncode vraagt Rust 1.85 of nieuwer op elk platform dat Rust ondersteunt.
 
+## Aan de slag in 5 minuten
+
+Installeer rum-meter zoals bij Installatie en zet het op je `PATH`. Draai de
+onderstaande commando's vanuit de hoofdmap van de repository. Ze lezen de
+fictieve state-bestanden in `examples/`: geen netwerk, geen HCP
+Terraform-account, geen bestand van deze machine. De test
+`tests/readme_quickstart.rs` draait deze regels letterlijk.
+
+```sh
+rum-meter count examples/one-managed.tfstate
+rum-meter count --explain examples/web-stack.tfstate
+rum-meter diff examples/web-stack.tfstate examples/web-stack-next.tfstate
+```
+
+Elk commando eindigt met exitcode 0. De uitvoer staat in
+`examples/one-managed.count.txt`, `examples/web-stack.count.txt` en
+`examples/web-stack.diff.txt`.
+
 ## Snel aan de slag
 
 Een state-argument `-` leest stdin. Elk ander statepad is een bestandspad, geen pipe of stdin (zie [Beperkingen](#beperkingen)).
@@ -353,7 +371,7 @@ De billingpagina toont de telling achteraf. rum-meter leest een bestand dat je a
 
 Waar de fixtures vandaan komen: [tests/fixtures/README.md](tests/fixtures/README.md).
 
-De suite heeft 250 automatische tests (`cargo test`). [QUALITY.nl.md](QUALITY.nl.md) noemt hetzelfde aantal.
+De suite heeft 251 automatische tests (`cargo test`). [QUALITY.nl.md](QUALITY.nl.md) noemt hetzelfde aantal.
 
 ## Privacy
 
