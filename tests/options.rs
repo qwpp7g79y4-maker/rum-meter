@@ -247,6 +247,21 @@ const CASES: &[(&str, Case)] = &[
             },
         },
     ),
+    (
+        "--output",
+        Case {
+            count: Expect::Output {
+                baseline: &[],
+                with: &["--output", "target/w43-options-report.txt"],
+                files: COUNT_FILES,
+            },
+            diff: Expect::Output {
+                baseline: &[],
+                with: &["--output", "target/w43-options-report.txt"],
+                files: DIFF_FILES,
+            },
+        },
+    ),
 ];
 
 fn binary() -> Command {
@@ -862,6 +877,8 @@ fn first_refusal_wins_when_several_are_set() {
 
 #[test]
 fn every_global_option_has_effect_or_exits_3() {
+    std::fs::create_dir_all(Path::new(env!("CARGO_MANIFEST_DIR")).join("target"))
+        .expect("options report directory");
     let help = help_of(&["--help"]);
     let names = global_options(&help);
     let from_help: BTreeSet<&str> = names

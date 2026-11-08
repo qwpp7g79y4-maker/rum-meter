@@ -320,6 +320,7 @@ Dit zijn alle opties uit `rum-meter --help`. De commando's zijn `count` en `diff
 - `--max-increase <N>`: limiet voor de RUM-stijging bij `diff`. Erboven is de exitcode 1.
 - `--quiet`: verberg de hintregel. Geen contextregel. Het rapport blijft hetzelfde.
 - `--verbose`: druk de hintregel, en bij succes één contextregel op stderr. Het rapport blijft hetzelfde.
+- `--output <PATH>`: schrijf het rapport naar dit bestand in plaats van stdout. Een bestaand bestand wordt vervangen. Een ontbrekende bovenliggende map is exit 2 en wordt niet aangemaakt.
 - `-h`, `--help`: druk de hulptekst.
 - `-V`, `--version`: druk de versie.
 

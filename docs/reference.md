@@ -23,6 +23,7 @@ A flag that would not change the report is exit 3, with one fixed line on stderr
 | `--max-increase` | diff | Exit 1 when new RUM minus old RUM is above N. An equal delta is within the limit. A decrease is within every limit. The report is still printed. |
 | `--quiet` | count and diff | Hide the hint line, also on a terminal. No context line. Stdout is unchanged. |
 | `--verbose` | count and diff | Print the hint line even when stderr is a pipe, and on success one `context:` line on stderr. Stdout is unchanged. Together with `--quiet` this is exit 3. |
+| `--output` | count and diff | Write the report to this file instead of stdout. An existing file is replaced. A missing parent directory is exit 2 and is not created. Stdout stays empty. Exit codes stay 0, 1, 2 and 3. |
 | `--help` | everywhere | Show help and exit 0. `-h` is the short form. |
 | `--version` | top level | Show `rum-meter 1.0.0` and exit 0. `-V` is the short form. |
 
@@ -147,7 +148,7 @@ Every exit-2 message below names what went wrong and, after a semicolon, what yo
 | 2 | Input error: unreadable file, not a regular file, invalid JSON, a state that is not a JSON object, state version not 4, UTF-16 or UTF-32, a duplicate address, the same state file given more than once, an invalid price file, or a cost that overflows. Stdout is empty. |
 | 3 | Usage error, including a flag that would not change the report. Stdout is empty. |
 
-A report that cannot be written or flushed to stdout also exits 2, with `rum-meter: cannot write report to stdout`. Some report bytes may already have been written when the failure occurs. A closed stdout is the same error. `--version` and `--help` that cannot be written or flushed also exit 2, not 0, with `rum-meter: cannot write message to stdout`. A failed write does not panic. When stderr cannot be written either, the exit code is unchanged and there is no panic.
+A report that cannot be written or flushed to stdout also exits 2, with `rum-meter: cannot write report to stdout`. Some report bytes may already have been written when the failure occurs. A closed stdout is the same error. `--version` and `--help` that cannot be written or flushed also exit 2, not 0, with `rum-meter: cannot write message to stdout`. A failed write does not panic. When stderr cannot be written either, the exit code is unchanged and there is no panic. `--output PATH` writes that same report to the file and leaves stdout empty. An existing file is replaced. A missing parent directory is exit 2, not exit 1, and the directory is not created.
 
 Every row below is run against the binary. The message is the whole stderr, and `\n` is a newline.
 
@@ -183,6 +184,7 @@ Every row below is run against the binary. The message is the whole stderr, and 
 | state file | count | The same path twice. | `count tests/fixtures/v4_one_managed.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/v4_one_managed.json: state file is given more than once; pass each state file once\n` |
 | state file | count | A device is not a regular file (Linux and macOS). | `count /dev/null` | 2 | `rum-meter: /dev/null: not a regular file; pass a regular file, or - to read stdin\n` |
 | `--prices` | count | The price path is a device (Linux and macOS). | `count --prices /dev/null tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: /dev/null: not a regular file; pass a regular file, or - to read stdin\n` |
+| `--output` | count | The parent directory is missing. | `count --output tests/no-such-output-dir/report.txt tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: cannot write report to tests/no-such-output-dir/report.txt; check that the parent directory exists and is writable, the tool does not create it\n` |
 
 ## Privacy and safety
 

@@ -25,6 +25,7 @@ Een vlag die het rapport niet zou veranderen is exit 3, met één vaste regel op
 | `--max-increase` | diff | Exit 1 als nieuwe RUM min oude RUM boven N ligt. Een gelijke delta valt binnen de grens. Een daling valt binnen elke grens. Het rapport wordt toch afgedrukt. |
 | `--quiet` | count en diff | Verberg de hintregel, ook op een terminal. Geen contextregel. Stdout blijft gelijk. |
 | `--verbose` | count en diff | Druk de hintregel ook als stderr een pipe is, en bij succes één regel `context:` op stderr. Stdout blijft gelijk. Samen met `--quiet` is dit exit 3. |
+| `--output` | count en diff | Schrijf het rapport naar dit bestand in plaats van stdout. Een bestaand bestand wordt vervangen. Een ontbrekende bovenliggende map is exit 2 en wordt niet aangemaakt. Stdout blijft leeg. De exitcodes blijven 0, 1, 2 en 3. |
 | `--help` | overal | Toon de hulp en exit 0. `-h` is de korte vorm. |
 | `--version` | alleen het topniveau | Toon `rum-meter 1.0.0` en exit 0. `-V` is de korte vorm. |
 
@@ -149,7 +150,7 @@ Elke exit-2-melding hieronder noemt wat er misging en, na een puntkomma, wat je 
 | 2 | Invoerfout: onleesbaar bestand, geen gewoon bestand, ongeldige JSON, een state die geen JSON-object is, stateversie niet 4, UTF-16 of UTF-32, een dubbel adres, hetzelfde statebestand meer dan eens, een ongeldig prijsbestand, of kosten die overlopen. Stdout is leeg. |
 | 3 | Gebruiksfout, ook een vlag die het rapport niet zou veranderen. Stdout is leeg. |
 
-Als het rapport niet naar stdout geschreven of geflusht kan worden, is de exitcode ook 2, met `rum-meter: cannot write report to stdout`. Er kan dan al een deel van het rapport geschreven zijn. Een gesloten stdout is dezelfde fout. `--version` en `--help` die niet geschreven of geflusht kunnen worden zijn ook exit 2, niet 0, met `rum-meter: cannot write message to stdout`. Een mislukte schrijfactie geeft geen panic. Als stderr ook niet geschreven kan worden, blijft de exitcode hetzelfde en is er geen panic.
+Als het rapport niet naar stdout geschreven of geflusht kan worden, is de exitcode ook 2, met `rum-meter: cannot write report to stdout`. Er kan dan al een deel van het rapport geschreven zijn. Een gesloten stdout is dezelfde fout. `--version` en `--help` die niet geschreven of geflusht kunnen worden zijn ook exit 2, niet 0, met `rum-meter: cannot write message to stdout`. Een mislukte schrijfactie geeft geen panic. Als stderr ook niet geschreven kan worden, blijft de exitcode hetzelfde en is er geen panic. `--output PATH` schrijft datzelfde rapport naar het bestand en laat stdout leeg. Een bestaand bestand wordt vervangen. Een ontbrekende bovenliggende map is exit 2, niet exit 1, en die map wordt niet aangemaakt.
 
 Elke rij hieronder draait tegen de binary. De melding is de hele stderr, en `\n` is een newline. Het commando en de melding zijn Engels.
 
@@ -185,6 +186,7 @@ Elke rij hieronder draait tegen de binary. De melding is de hele stderr, en `\n`
 | statebestand | count | Hetzelfde pad twee keer. | `count tests/fixtures/v4_one_managed.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/v4_one_managed.json: state file is given more than once; pass each state file once\n` |
 | statebestand | count | Een apparaat is geen gewoon bestand (Linux en macOS). | `count /dev/null` | 2 | `rum-meter: /dev/null: not a regular file; pass a regular file, or - to read stdin\n` |
 | `--prices` | count | Het prijzenpad is een apparaat (Linux en macOS). | `count --prices /dev/null tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: /dev/null: not a regular file; pass a regular file, or - to read stdin\n` |
+| `--output` | count | De bovenliggende map ontbreekt. | `count --output tests/no-such-output-dir/report.txt tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: cannot write report to tests/no-such-output-dir/report.txt; check that the parent directory exists and is writable, the tool does not create it\n` |
 
 ## Privacy en veiligheid
 

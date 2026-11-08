@@ -77,6 +77,10 @@ struct Cli {
     #[arg(long, global = true, conflicts_with = "quiet")]
     verbose: bool,
 
+    /// Write the report to this file instead of stdout
+    #[arg(long, global = true, value_name = "PATH")]
+    output: Option<PathBuf>,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -201,6 +205,7 @@ fn normalize_stdin_args() -> Vec<OsString> {
         "--hours-per-month",
         "--max-rum",
         "--max-increase",
+        "--output",
     ];
     let mut args: Vec<OsString> = std::env::args_os().collect();
     let mut index = 0;
@@ -288,11 +293,24 @@ fn write_stderr_hint(message: &str, hint: &str) {
 enum CliError {
     State(rum_meter::state::LoadError),
     Prices(rum_meter::cost::PriceError),
-    DuplicateAddress { path: PathBuf, address: String },
-    LabelTooLarge { path: PathBuf },
-    RepeatedPath { path: PathBuf },
-    CostOverflow { path: PathBuf },
+    DuplicateAddress {
+        path: PathBuf,
+        address: String,
+    },
+    LabelTooLarge {
+        path: PathBuf,
+    },
+    RepeatedPath {
+        path: PathBuf,
+    },
+    CostOverflow {
+        path: PathBuf,
+    },
     Output,
+    /// `--output` could not be created or written. The parent directory is not created.
+    ReportFile {
+        path: PathBuf,
+    },
 }
 
 impl fmt::Display for CliError {
@@ -330,6 +348,13 @@ impl fmt::Display for CliError {
                 )
             }
             Self::Output => f.write_str("rum-meter: cannot write report to stdout; check that stdout is open and the disk is not full"),
+            Self::ReportFile { path } => {
+                write!(
+                    f,
+                    "rum-meter: cannot write report to {}; check that the parent directory exists and is writable, the tool does not create it",
+                    rum_meter::rum::escape_controls(&path.display().to_string())
+                )
+            }
         }
     }
 }
@@ -344,6 +369,9 @@ impl CliError {
             Self::RepeatedPath { .. } => "pass each state file once",
             Self::CostOverflow { .. } => "check the prices and --hours-per-month",
             Self::Output => "check that stdout is open and the disk is not full",
+            Self::ReportFile { .. } => {
+                "check that the parent directory exists and is writable, the tool does not create it"
+            }
         }
     }
 }
@@ -518,7 +546,7 @@ fn execute(cli: &Cli) -> Result<RunOutcome, CliError> {
             } else {
                 rum_meter::render::render_count_text(&files, cli.explain, cli.top, &costs)
             };
-            write_report(&report)?;
+            write_report(cli.output.as_deref(), &report)?;
             Ok(outcome(
                 cli.max_rum
                     .is_some_and(|max_rum| count_exceeds(rum, max_rum)),
@@ -589,7 +617,7 @@ fn execute(cli: &Cli) -> Result<RunOutcome, CliError> {
             } else {
                 rum_meter::render::render_diff_text(old, new, &diff, &cost_deltas)
             };
-            write_report(&report)?;
+            write_report(cli.output.as_deref(), &report)?;
             Ok(outcome(
                 cli.max_increase
                     .is_some_and(|max_increase| increase_exceeds(diff.rum_delta(), max_increase)),
@@ -600,13 +628,27 @@ fn execute(cli: &Cli) -> Result<RunOutcome, CliError> {
     }
 }
 
-/// Flush explicitly so a buffered write failure cannot turn success into a panic.
-fn write_report(report: &str) -> Result<(), CliError> {
-    let mut stdout = io::stdout().lock();
-    stdout
-        .write_all(report.as_bytes())
-        .and_then(|()| stdout.flush())
-        .map_err(|_| CliError::Output)
+/// Write the report to `--output`, or to stdout when that flag is absent.
+///
+/// An existing file is replaced. A missing parent directory is not created.
+/// That failure is the same exit 2 as a failed write to stdout. A threshold
+/// is still exit 1, and the report is written either way.
+fn write_report(path: Option<&Path>, report: &str) -> Result<(), CliError> {
+    let Some(path) = path else {
+        let mut stdout = io::stdout().lock();
+        return stdout
+            .write_all(report.as_bytes())
+            .and_then(|()| stdout.flush())
+            .map_err(|_| CliError::Output);
+    };
+    let mut file = std::fs::File::create(path).map_err(|_| CliError::ReportFile {
+        path: path.to_path_buf(),
+    })?;
+    file.write_all(report.as_bytes())
+        .and_then(|()| file.flush())
+        .map_err(|_| CliError::ReportFile {
+            path: path.to_path_buf(),
+        })
 }
 
 /// `--max-rum` compared with the summed count. A total that does not fit in `u64` is over every limit.

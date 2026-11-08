@@ -148,6 +148,13 @@ Together with
 .B --quiet
 this is a usage error, exit 3.
 .TP
+.B --output <PATH>
+Write the report to this file instead of stdout.
+An existing file is replaced.
+A missing parent directory is exit 2 and is not created.
+Stdout stays empty.
+Exit codes stay 0, 1, 2 and 3.
+.TP
 .B -h, --help
 Print help.
 .TP
@@ -216,6 +223,10 @@ Stdout is empty for these errors.
 A report that cannot be written to stdout is also exit 2, with
 .BR "rum-meter: cannot write report to stdout" .
 Some of the report may already have been written.
+.B --output
+that cannot be written is the same exit 2.
+The parent directory is not created.
+A threshold stays exit 1.
 .B --version
 and
 .B --help
