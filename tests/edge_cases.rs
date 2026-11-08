@@ -474,7 +474,7 @@ fn version_3_and_5_exit_2() {
         assert_eq!(
             stderr,
             format!(
-                "rum-meter: {path}: state version is not 4; only state format version 4 is supported\n"
+                "rum-meter: {path}: state version is not 4; only state format version 4 is supported, so write the state again with terraform state pull on a current Terraform or OpenTofu\n"
             )
         );
     }

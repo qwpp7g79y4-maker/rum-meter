@@ -187,7 +187,7 @@ impl fmt::Display for LoadError {
             Self::UnsupportedVersion { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: state version is not 4; only state format version 4 is supported",
+                    "rum-meter: {}: state version is not 4; only state format version 4 is supported, so write the state again with terraform state pull on a current Terraform or OpenTofu",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
