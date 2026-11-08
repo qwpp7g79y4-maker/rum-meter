@@ -11,7 +11,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
-- README, README.nl, `QUALITY.md` and `QUALITY.nl.md` state the measured test count (251).
+- README, README.nl, `QUALITY.md` and `QUALITY.nl.md` state the measured test count (286).
 - README and README.nl have a section "Aan de slag in 5 minuten". `tests/readme_quickstart.rs` runs its commands literally.
 
 ## [1.0.0] - 2026-11-08

@@ -8,7 +8,7 @@ Deze pagina laat zien hoe elke release van rum-meter is gecontroleerd voordat hi
 |---|---|
 | Versie | 1.0.0 (niet gepubliceerd vanaf deze tak) |
 | Gemeten commit | `126d12e` plus de quick-start-wijziging |
-| Tests | 251 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debugmodus) |
+| Tests | 286 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debugmodus) |
 | Lints | `cargo fmt --check` en `cargo clippy --all-targets -- -D warnings` schoon |
 
 ## v0.1.2
