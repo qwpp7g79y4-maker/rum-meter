@@ -37,7 +37,9 @@ const TOOL: &str = "rum-meter";
 
 /// One loaded state file and the verdicts for its instances.
 pub struct CountedFile<'a> {
+    /// Path that was loaded. `-` means stdin.
     pub path: &'a Path,
+    /// Verdicts for this file, in [`crate::rum::classify`] order.
     pub verdicts: &'a [Verdict],
 }
 
@@ -226,12 +228,19 @@ fn tainted_mark(tainted: bool) -> &'static str {
 /// `costs` is the new state's monthly estimate. Both `costs` and `cost_deltas`
 /// are empty when no price file was given.
 pub struct DiffJsonInput<'a> {
+    /// Path of the older state.
     pub old: &'a Path,
+    /// Path of the newer state.
     pub new: &'a Path,
+    /// Verdicts for [`Self::old`].
     pub old_verdicts: &'a [Verdict],
+    /// Verdicts for [`Self::new`].
     pub new_verdicts: &'a [Verdict],
+    /// Difference already computed from the two verdict lists.
     pub diff: &'a StateDiff,
+    /// Monthly estimate for the newer state. Empty when no price file was given.
     pub costs: &'a [TierCost],
+    /// Per-tier cost difference. Empty when no price file was given.
     pub cost_deltas: &'a [CostDelta],
 }
 

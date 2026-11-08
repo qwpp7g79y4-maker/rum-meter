@@ -17,14 +17,18 @@ const ROOT_MODULE: &str = "(root)";
 /// One row of a breakdown.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Row {
+    /// Module path, resource type, `(root)`, `other`, or a disambiguated remainder.
     pub name: String,
+    /// Billable instances in this row.
     pub count: usize,
 }
 
 /// Billable instances grouped by module and by resource type.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Breakdown {
+    /// Counting instances by module. An absent or empty module is `(root)`.
     pub modules: Vec<Row>,
+    /// Counting instances by resource type.
     pub types: Vec<Row>,
 }
 

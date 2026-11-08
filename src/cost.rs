@@ -36,13 +36,16 @@ const MAX_CURRENCY_CHARS: usize = 16;
 /// A price list read from disk. `price_per_rum_hour` is the exact decimal from the file.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PriceList {
+    /// Currency label from the file. Copied onto every tier line.
     pub currency: String,
+    /// Tiers in file order. Names are unique.
     pub tiers: Vec<TierPrice>,
 }
 
 /// One tier. The name and the price are taken from the file as given.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TierPrice {
+    /// Tier name from the file.
     pub name: String,
     /// Exact decimal from the JSON number. Not a binary float.
     pub price_per_rum_hour: BigDecimal,
@@ -51,8 +54,11 @@ pub struct TierPrice {
 /// One tier of the monthly estimate. `amount` is already rounded to two decimals.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TierCost {
+    /// Tier name from the price file.
     pub name: String,
+    /// Currency label from the price file.
     pub currency: String,
+    /// Monthly amount, rounded half away from zero to two decimal places.
     pub amount: String,
 }
 
@@ -121,64 +127,97 @@ fn format_cents(cents: u64) -> String {
     format!("{}.{:02}", cents / 100, cents % 100)
 }
 
+/// Why a price file was refused.
+///
+/// The display text is the path and the kind of problem, never bytes from the file.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PriceError {
+    /// The path could not be opened or read.
     Unreadable {
+        /// Path that was refused.
         path: PathBuf,
+        /// Short I/O kind, such as `not found` or `permission denied`.
         kind: &'static str,
     },
     /// The path exists and is not a regular file. Nothing was read.
     NotRegular {
+        /// Path that was refused.
         path: PathBuf,
     },
-    /// More than [`crate::regular::MAX_INPUT_BYTES`] were read. Nothing was parsed.
+    /// More than 128 MiB were read. Nothing was parsed.
     TooLarge {
+        /// Path that was refused.
         path: PathBuf,
     },
+    /// The file is not valid JSON.
     InvalidJson {
+        /// Path that was refused.
         path: PathBuf,
+        /// 1-based line reported by the JSON parser.
         line: usize,
+        /// 1-based column reported by the JSON parser.
         column: usize,
     },
+    /// The JSON root is not an object with the price-file fields.
     Invalid {
+        /// Path that was refused.
         path: PathBuf,
     },
+    /// The `tiers` array is empty.
     NoTiers {
+        /// Path that was refused.
         path: PathBuf,
     },
+    /// A tier `name` is empty.
     EmptyTierName {
+        /// Path that was refused.
         path: PathBuf,
     },
+    /// An element of `tiers` is not a JSON object.
     TierNotObject {
+        /// Path that was refused.
         path: PathBuf,
     },
+    /// A tier object repeats a key.
     DuplicateKey {
+        /// Path that was refused.
         path: PathBuf,
     },
     /// Two tiers share a `name`. Nothing from either tier is printed.
     DuplicateTierName {
+        /// Path that was refused.
         path: PathBuf,
     },
+    /// `price_per_rum_hour` is negative.
     NegativePrice {
+        /// Path that was refused.
         path: PathBuf,
     },
+    /// `price_per_rum_hour` is not a decimal number.
     NonNumericPrice {
+        /// Path that was refused.
         path: PathBuf,
     },
+    /// `currency` is empty.
     EmptyCurrency {
+        /// Path that was refused.
         path: PathBuf,
     },
     /// `currency` is longer than 16 characters. The text is not printed.
     CurrencyTooLong {
+        /// Path that was refused.
         path: PathBuf,
     },
     /// `currency` is not visible ASCII (U+0021 `!` through U+007E `~`).
     CurrencyNotAscii {
+        /// Path that was refused.
         path: PathBuf,
     },
     /// UTF-16 or UTF-32. Nothing was decoded.
     NotUtf8 {
+        /// Path that was refused.
         path: PathBuf,
+        /// `UTF-16` or `UTF-32`.
         encoding: &'static str,
     },
 }

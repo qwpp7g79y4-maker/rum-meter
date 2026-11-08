@@ -9,11 +9,14 @@
 /// A wide encoding that is refused.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Wide {
+    /// UTF-16, with or without a BOM.
     Utf16,
+    /// UTF-32, with or without a BOM.
     Utf32,
 }
 
 impl Wide {
+    /// `UTF-16` or `UTF-32`, for an error line.
     pub fn name(self) -> &'static str {
         match self {
             Self::Utf16 => "UTF-16",

@@ -10,8 +10,8 @@
 //! and is a different object. The tainted flag is not part of the address.
 //!
 //! Cost delta is the new monthly tier amount minus the old one. Both sides
-//! are the integer cents from [`crate::cost::monthly_cents`], the same
-//! rounding [`crate::cost::monthly_costs`] prints. The formatted text is not parsed.
+//! are rounded to integer cents before they are subtracted, the same rounding
+//! [`crate::cost::monthly_costs`] prints. The formatted text is not parsed.
 
 use std::collections::BTreeMap;
 
@@ -21,8 +21,11 @@ use crate::rum::{Rule, Verdict, total_rum};
 /// Same address, different rule. The address is in both states.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RuleChange {
+    /// Address present in both states.
     pub address: String,
+    /// Rule in the older state.
     pub old_rule: Rule,
+    /// Rule in the newer state.
     pub new_rule: Rule,
 }
 
@@ -31,10 +34,15 @@ pub struct RuleChange {
 /// `added`, `removed` and `changed_rule` are sorted by address.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StateDiff {
+    /// Counting addresses present only in the newer state, sorted by address.
     pub added: Vec<String>,
+    /// Counting addresses present only in the older state, sorted by address.
     pub removed: Vec<String>,
+    /// Same address with a different rule, sorted by address.
     pub changed_rule: Vec<RuleChange>,
+    /// Billable RUM in the older state.
     pub old_rum: usize,
+    /// Billable RUM in the newer state.
     pub new_rum: usize,
 }
 
@@ -50,8 +58,11 @@ impl StateDiff {
 /// One tier of the monthly cost difference. `amount` is a signed two-decimal number.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CostDelta {
+    /// Tier name from the price file.
     pub name: String,
+    /// Currency label from the price file.
     pub currency: String,
+    /// Signed two-decimal difference, new minus old. A positive value starts with `+`.
     pub amount: String,
 }
 

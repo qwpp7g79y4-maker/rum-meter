@@ -30,6 +30,7 @@ pub enum Rule {
 }
 
 impl Rule {
+    /// `R1`, `R2`, `R3` or `R4`.
     pub const fn code(self) -> &'static str {
         match self {
             Self::R1 => "R1",
@@ -39,6 +40,10 @@ impl Rule {
         }
     }
 
+    /// Reason text for this variant.
+    ///
+    /// [`Rule::R2`] is `data source`. [`classify`] stores `unknown mode` on the
+    /// verdict when the mode is neither `managed` nor `data`.
     pub const fn reason(self) -> &'static str {
         match self {
             Self::R1 => "managed resource",
@@ -61,16 +66,22 @@ impl fmt::Display for Rule {
 /// Every other row is one instance.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Verdict {
+    /// Printed address, including a deposed key when there is one.
     pub address: String,
     /// Exact identity of the state object: module, mode, type, name, index
     /// key and deposed key, each kept apart. Two objects can print the same
     /// `address` (a resource named `a[0]` and resource `a` at index 0), so
     /// `diff` matches on this, never on the printed address.
     pub identity: String,
+    /// Resource type from the state.
     pub resource_type: String,
+    /// Module path. `None` or empty is the root module.
     pub module: Option<String>,
+    /// Whether this row adds one to the billable total. Only [`Rule::R1`] counts.
     pub counts: bool,
+    /// Rule that produced this row.
     pub rule: Rule,
+    /// Why the rule applied. An unknown mode stores `unknown mode`, not [`Rule::reason`].
     pub reason: &'static str,
     /// True only when the state object has `status` = `tainted`.
     pub tainted: bool,

@@ -29,19 +29,27 @@ use serde::Deserialize;
 /// `sensitive_attributes`, `private` and `outputs` are never stored.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct State {
+    /// `version` from the state file. Only 4 is accepted.
     pub version: u64,
+    /// Resource blocks. Absent in the file means none.
     #[serde(default)]
     pub resources: Vec<Resource>,
 }
 
+/// One resource block from the state file.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct Resource {
+    /// `managed`, `data`, or another mode string from the file.
     pub mode: String,
+    /// Resource type. The JSON field is `type`.
     #[serde(rename = "type")]
     pub resource_type: String,
+    /// Resource name.
     pub name: String,
+    /// Module path. Absent at the root.
     #[serde(default)]
     pub module: Option<String>,
+    /// Instances in this block. Empty means there are none.
     #[serde(default)]
     pub instances: Vec<Instance>,
 }
@@ -54,8 +62,11 @@ pub struct Resource {
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(from = "InstanceFile")]
 pub struct Instance {
+    /// Count index or for_each key. Absent when the resource has neither.
     pub index_key: Option<IndexKey>,
+    /// Key of a create_before_destroy object that is not current.
     pub deposed: Option<String>,
+    /// True only when `status` is the string `tainted`.
     pub tainted: bool,
 }
 
@@ -84,39 +95,59 @@ impl From<InstanceFile> for Instance {
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(untagged)]
 pub enum IndexKey {
+    /// Count index, a JSON number.
     Number(u64),
+    /// for_each key, a JSON string.
     String(String),
 }
 
+/// Why a state file was refused.
+///
+/// The display text is the path, the error kind, and for JSON the line and
+/// column. It never includes bytes from the file.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LoadError {
+    /// The path could not be opened or read.
     Unreadable {
+        /// Path that was refused.
         path: PathBuf,
+        /// Short I/O kind, such as `not found` or `permission denied`.
         kind: &'static str,
     },
     /// The path exists and is not a regular file. Nothing was read.
     NotRegular {
+        /// Path that was refused.
         path: PathBuf,
     },
-    /// More than [`crate::regular::MAX_INPUT_BYTES`] were read. Nothing was parsed.
+    /// More than 128 MiB were read. Nothing was parsed.
     TooLarge {
+        /// Path that was refused. `-` means stdin.
         path: PathBuf,
     },
+    /// The file is not valid JSON.
     InvalidJson {
+        /// Path that was refused.
         path: PathBuf,
+        /// 1-based line reported by the JSON parser.
         line: usize,
+        /// 1-based column reported by the JSON parser.
         column: usize,
     },
+    /// `version` is not 4.
     UnsupportedVersion {
+        /// Path that was refused.
         path: PathBuf,
     },
     /// Valid JSON whose root is an array, not an object.
     NotObject {
+        /// Path that was refused.
         path: PathBuf,
     },
     /// UTF-16 or UTF-32. Nothing was decoded.
     NotUtf8 {
+        /// Path that was refused.
         path: PathBuf,
+        /// `UTF-16` or `UTF-32`.
         encoding: &'static str,
     },
 }
@@ -231,9 +262,8 @@ impl std::error::Error for LoadError {}
 /// for JSON the line and column. It never includes bytes from the file.
 ///
 /// A path that is not a regular file is refused without reading a byte.
-/// The path `-` reads stdin instead: a pipe or a regular file, up to
-/// [`crate::regular::MAX_INPUT_BYTES`]. A terminal or a device on stdin is
-/// refused without reading a byte.
+/// The path `-` reads stdin instead: a pipe or a regular file, up to 128 MiB.
+/// A terminal or a device on stdin is refused without reading a byte.
 pub fn load_state(path: &Path) -> Result<State, LoadError> {
     let bytes = if path == Path::new("-") {
         crate::regular::read_stdin().map_err(|err| read_error(path, err))?
