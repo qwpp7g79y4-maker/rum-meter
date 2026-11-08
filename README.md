@@ -256,7 +256,7 @@ changed rule:
 estimate: HCP Terraform bills the hourly peak; this is a single snapshot
 ```
 
-Exit code 0 is success. Exit code 1 is a threshold: `--max-rum` on `count`, `--max-increase` on `diff`. The report is still printed. Exit code 2 is an input error (unreadable file, not a regular file, invalid JSON, a state that is not a JSON object, state version not 4, a duplicate address, the same state file given more than once, UTF-16 or UTF-32, an invalid price file, or a cost that overflows). Exit code 3 is a usage error. A flag that would not change the report is also exit 3, with a fixed message on stderr and nothing on stdout, before the states are read. If several apply, the first of these wins:
+Exit code 0 is success. Exit code 1 is a threshold: `--max-rum` on `count`, `--max-increase` on `diff`. The report is still printed. Exit code 2 is an input error (unreadable file, not a regular file, invalid JSON, a state that is not a JSON object, state version not 4, a duplicate address, the same state file given more than once, UTF-16 or UTF-32, an invalid price file, a cost that overflows, or a file larger than 128 MiB). Exit code 3 is a usage error. A flag that would not change the report is also exit 3, with a fixed message on stderr and nothing on stdout, before the states are read. If several apply, the first of these wins:
 
 - `--max-increase only works with diff`
 - `--max-rum only works with count`
@@ -369,6 +369,7 @@ The billing page shows the count afterwards. rum-meter reads a file you already 
 - rum-meter reads UTF-8, for state files and price files. A UTF-8 BOM at the start of the file is skipped. A UTF-16 or UTF-32 file, with or without a BOM, such as Windows PowerShell 5.1 writes on a redirect, is not converted. That is exit 2, with the message that the file is UTF-16 (or UTF-32) and must be saved as UTF-8, for example with `iconv -f UTF-16 -t UTF-8` or in PowerShell with `Out-File -Encoding utf8`. CRLF line ends are fine.
 - A file name that is not valid UTF-8 (possible on Linux) is read, but shown in the report with U+FFFD for the invalid bytes.
 - rum-meter reads only regular files, so not a pipe or process substitution. A directory, a FIFO or a device is refused with exit 2 before any byte is read. A symlink to a FIFO is refused the same way. The open does not wait, and the type is taken from the opened file, so a path that becomes a FIFO is not read and does not hang. A symlink to a regular file is read. The state argument `-` is the exception: stdin is read to the end when it is a pipe or a regular file. A terminal or a device on stdin is `not a regular file`, and nothing is read.
+- A state file, a price file and stdin are read up to 128 MiB. A file already over that size is exit 2, `file is larger than 128 MiB`, and nothing is parsed. The cap is the bytes that would be read, so a sparse file is refused from its size before any byte is read. A pipe stops at the same cap instead of being read without end.
 
 Where the fixtures come from: [tests/fixtures/README.md](tests/fixtures/README.md).
 

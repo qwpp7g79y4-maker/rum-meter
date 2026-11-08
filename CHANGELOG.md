@@ -13,6 +13,7 @@ All notable changes to this project are documented in this file.
 
 ### Changed
 
+- README and README.nl name the existing 128 MiB input cap. A state file, a price file or stdin over that cap is exit 2, `file is larger than 128 MiB`, and nothing is parsed. The cap is not raised. Tests in `tests/input_cap.rs`.
 - README, README.nl, `QUALITY.md` and `QUALITY.nl.md` state the measured test count (286).
 - README and README.nl have a section "Aan de slag in 5 minuten". `tests/readme_quickstart.rs` runs its commands literally.
 

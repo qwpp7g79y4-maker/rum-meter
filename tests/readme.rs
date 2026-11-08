@@ -238,6 +238,7 @@ fn readme_names_exact_price_repeated_file_and_fifo() {
             "1.01",
             "cannot write message to stdout",
             "cannot write report to stdout",
+            "`file is larger than 128 MiB`",
         ] {
             assert!(text.contains(part), "{rel} is missing {part}");
         }

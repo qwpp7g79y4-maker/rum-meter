@@ -260,7 +260,7 @@ changed rule:
 estimate: HCP Terraform bills the hourly peak; this is a single snapshot
 ```
 
-Exitcode 0 is gelukt. Exitcode 1 is een drempel: `--max-rum` bij `count`, `--max-increase` bij `diff`. Het rapport wordt toch afgedrukt. Exitcode 2 is een invoerfout (onleesbaar bestand, geen gewoon bestand, ongeldige JSON, een state die geen JSON-object is, stateversie niet 4, een dubbel adres, hetzelfde statebestand meer dan eens, UTF-16 of UTF-32, een ongeldig prijsbestand, of kosten die overlopen). Exitcode 3 is een gebruiksfout. Een vlag die het rapport niet zou veranderen is ook exit 3, met een vaste melding op stderr en niets op stdout, vóór het lezen van de states. Staan er meer tegelijk, dan wint de eerste van deze:
+Exitcode 0 is gelukt. Exitcode 1 is een drempel: `--max-rum` bij `count`, `--max-increase` bij `diff`. Het rapport wordt toch afgedrukt. Exitcode 2 is een invoerfout (onleesbaar bestand, geen gewoon bestand, ongeldige JSON, een state die geen JSON-object is, stateversie niet 4, een dubbel adres, hetzelfde statebestand meer dan eens, UTF-16 of UTF-32, een ongeldig prijsbestand, kosten die overlopen, of een bestand groter dan 128 MiB). Exitcode 3 is een gebruiksfout. Een vlag die het rapport niet zou veranderen is ook exit 3, met een vaste melding op stderr en niets op stdout, vóór het lezen van de states. Staan er meer tegelijk, dan wint de eerste van deze:
 
 - `--max-increase only works with diff`
 - `--max-rum only works with count`
@@ -371,6 +371,7 @@ De billingpagina toont de telling achteraf. rum-meter leest een bestand dat je a
 - rum-meter leest UTF-8, voor statebestanden en prijsbestanden. Een UTF-8 BOM aan het begin van het bestand wordt overgeslagen. Een UTF-16- of UTF-32-bestand, met of zonder BOM, zoals Windows PowerShell 5.1 bij een redirect schrijft, wordt niet omgezet. Dat is exit 2, met de melding dat het bestand UTF-16 (of UTF-32) is en als UTF-8 opgeslagen moet worden, bijvoorbeeld met `iconv -f UTF-16 -t UTF-8` of in PowerShell met `Out-File -Encoding utf8`. CRLF-regeleinden zijn geen probleem.
 - Een bestandsnaam die geen geldige UTF-8 is (kan op Linux) wordt wel gelezen, maar in het rapport getoond met U+FFFD voor de ongeldige bytes.
 - rum-meter leest alleen gewone bestanden, dus geen pipe of process substitution. Een map, een FIFO of een apparaat wordt geweigerd met exit 2 voordat er een byte wordt gelezen. Een symlink naar een FIFO wordt op dezelfde manier geweigerd. Het openen wacht niet, en het type komt van het geopende bestand, zodat een pad dat een FIFO wordt niet wordt gelezen en niet blijft hangen. Een symlink naar een gewoon bestand wordt wel gelezen. Het state-argument `-` is de uitzondering: stdin wordt tot het einde gelezen als het een pipe of een gewoon bestand is. Een terminal of een apparaat op stdin is `not a regular file`, en er wordt niets gelezen.
+- Een statebestand, een prijsbestand en stdin worden gelezen tot 128 MiB. Een bestand dat al groter is, is exit 2, `file is larger than 128 MiB`, en er wordt niets geparsed. De grens geldt voor de bytes die gelezen zouden worden, zodat een spaarzaam bestand op zijn grootte wordt geweigerd voordat er een byte wordt gelezen. Een pipe stopt bij dezelfde grens in plaats van eindeloos gelezen te worden.
 
 Waar de fixtures vandaan komen: [tests/fixtures/README.md](tests/fixtures/README.md).
 
