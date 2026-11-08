@@ -1,5 +1,6 @@
 //! `rum-meter completions` writes a bash or zsh script, and stays out of `--help`.
 
+use std::collections::BTreeSet;
 use std::process::{Command, Output};
 
 fn run(args: &[&str]) -> Output {
@@ -11,6 +12,19 @@ fn run(args: &[&str]) -> Output {
         .expect("start rum-meter")
 }
 
+/// Long option names from `--help` or from a completion script, without `--`.
+fn long_options(text: &str) -> BTreeSet<String> {
+    text.split_whitespace()
+        .filter_map(|word| word.strip_prefix("--"))
+        .map(|name| {
+            name.chars()
+                .take_while(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || *c == '-')
+                .collect::<String>()
+        })
+        .filter(|name| !name.is_empty())
+        .collect()
+}
+
 #[test]
 fn bash_script_names_the_options() {
     let out = run(&["completions", "bash"]);
@@ -18,6 +32,21 @@ fn bash_script_names_the_options() {
     let text = String::from_utf8(out.stdout).unwrap();
     assert!(text.contains("complete "));
     assert!(text.contains("--max-rum"));
+    let help_out = run(&["--help"]);
+    assert_eq!(help_out.status.code(), Some(0));
+    let help = String::from_utf8(help_out.stdout).unwrap();
+    let expected = long_options(&help);
+    assert!(
+        expected.contains("help") && expected.contains("version"),
+        "top-level --help should name --help and --version: {expected:?}"
+    );
+    let in_script = long_options(&text);
+    for option in &expected {
+        assert!(
+            in_script.contains(option),
+            "bash completion lacks --{option}"
+        );
+    }
 }
 
 #[test]
