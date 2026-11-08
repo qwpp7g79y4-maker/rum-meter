@@ -8,6 +8,10 @@ All notable changes to this project are documented in this file.
 
 - `--markdown` and `--html` print a Markdown or a self-contained HTML report for `count` and `diff`, next to text and `--json`. The three format flags exclude each other (exit 3). Snapshot tests in `tests/report_formats.rs`.
 
+### Changed
+
+- README, README.nl, `QUALITY.md` and `QUALITY.nl.md` state the measured test count (250).
+
 ## [1.0.0] - 2026-11-08
 
 The previous version is 0.1.3.
@@ -21,6 +25,7 @@ The previous version is 0.1.3.
 ### Changed
 
 - Every input error message now ends with a hint after a semicolon that says what you can do, for example `; pass each state file once`. The text before the semicolon, and every exit code, are unchanged.
+- CI runs one workflow per ref at a time, has a job timeout, skips draft pull requests and caches the Cargo build.
 - The copyright line in the licenses and READMEs reads `2025-2026 PEPAI / Pepijn de Jonge`.
 - README and README.nl state the test count (237), the same number as the pre-release section of `QUALITY.md` and `QUALITY.nl.md`.
 
