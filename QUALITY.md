@@ -2,12 +2,12 @@
 
 This page shows how each release of rum-meter was checked before it was published, what we found, and what we fixed. It describes checks we did. It is not a guarantee that the software is free of bugs or secure.
 
-## Pre-release 1.0.0 (branch prep/v1-kwaliteit)
+## Pre-release 1.0.0 (branch prep/w24-fout)
 
 | | |
 |---|---|
 | Version | 1.0.0 (not published from this branch) |
-| Commit measured | `126d12e` plus the quick-start change |
+| Commit measured | `decfa7b` (branch prep/w24-fout) |
 | Tests | 286 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debug mode) |
 | Lints | `cargo fmt --check` and `cargo clippy --all-targets -- -D warnings` clean |
 
@@ -16,7 +16,7 @@ This page shows how each release of rum-meter was checked before it was publishe
 | | |
 |---|---|
 | Date | 2026-11-08 |
-| Commit measured | `3f2486f` (branch prep/w24-fout) |
+| Commit measured | `decfa7b` (branch prep/w24-fout) |
 | Command | `cargo llvm-cov --no-fail-fast -- --skip symlink_becomes_fifo_between_name_and_open` |
 | Line coverage | 96.78% (2920 lines, 94 missed), as printed by the command |
 | Goal of 90% or more | Met. No tests were added for coverage. |
@@ -28,7 +28,7 @@ One test is skipped in the coverage run only: `symlink_becomes_fifo_between_name
 | | |
 |---|---|
 | Date | 2026-11-08 |
-| Commit measured | `bfad48b` (branch prep/w24-fout) |
+| Commit measured | `decfa7b` (branch prep/w24-fout) |
 | Build | `cargo build --release` |
 | Input | One synthetic Terraform state, 104857600 bytes (exactly 100 MiB), format version 4 as in `examples/`: 492,809 managed `aws_instance` resources, one instance each. The resource entries are almost identical: only the name and the instance id change. The file is generated in `/tmp` and is not committed. |
 | Command | `/usr/bin/time -f "%e s" target/release/rum-meter count big.tfstate` (exit 0, 492809 RUM) |

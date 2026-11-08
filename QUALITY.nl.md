@@ -2,12 +2,12 @@
 
 Deze pagina laat zien hoe elke release van rum-meter is gecontroleerd voordat hij online kwam, wat we vonden en wat we hebben opgelost. Het beschrijft onze controles. Het is geen garantie dat de software foutloos of veilig is.
 
-## Pre-release 1.0.0 (tak prep/v1-kwaliteit)
+## Pre-release 1.0.0 (tak prep/w24-fout)
 
 | | |
 |---|---|
 | Versie | 1.0.0 (niet gepubliceerd vanaf deze tak) |
-| Gemeten commit | `126d12e` plus de quick-start-wijziging |
+| Gemeten commit | `decfa7b` (tak prep/w24-fout) |
 | Tests | 286 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debugmodus) |
 | Lints | `cargo fmt --check` en `cargo clippy --all-targets -- -D warnings` schoon |
 
