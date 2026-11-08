@@ -16,7 +16,7 @@ The previous version is 0.1.3.
 
 - Every input error message now ends with a hint after a semicolon that says what you can do, for example `; pass each state file once`. The text before the semicolon, and every exit code, are unchanged.
 - The copyright line in the licenses and READMEs reads `2025-2026 PEPAI / Pepijn de Jonge`.
-- README and README.nl state the test count (268), the same number as the pre-release section of `QUALITY.md` and `QUALITY.nl.md`.
+- README and README.nl state the test count (237), the same number as the pre-release section of `QUALITY.md` and `QUALITY.nl.md`.
 
 ### Fixed
 
