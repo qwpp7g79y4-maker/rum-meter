@@ -215,7 +215,7 @@ fn symlink_to_regular_file_counts() {
 
 /// The path is a regular file at the name and a symlink to a FIFO at the open.
 /// The process must exit 2 within 2 seconds, not block in `open`.
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+#[cfg(all(target_os = "linux", target_arch = "x86_64", not(coverage)))]
 #[test]
 fn symlink_becomes_fifo_between_name_and_open_exits_2() {
     let dir = temp_dir().join("race");
@@ -334,10 +334,10 @@ fn symlink_becomes_fifo_between_name_and_open_exits_2() {
     );
 }
 
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+#[cfg(all(target_os = "linux", target_arch = "x86_64", not(coverage)))]
 struct ChildGuard(Option<std::process::Child>);
 
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+#[cfg(all(target_os = "linux", target_arch = "x86_64", not(coverage)))]
 impl Drop for ChildGuard {
     fn drop(&mut self) {
         if let Some(child) = self.0.as_mut() {
@@ -348,7 +348,7 @@ impl Drop for ChildGuard {
 }
 
 /// x86_64 Linux ptrace. Syscall numbers and register slots are the kernel ABI.
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+#[cfg(all(target_os = "linux", target_arch = "x86_64", not(coverage)))]
 mod trace {
     use std::io::{Read, Seek, SeekFrom};
 

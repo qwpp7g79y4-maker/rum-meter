@@ -14,7 +14,7 @@ exclude = [".github/", ".gitattributes", "fuzz/"]
 
 [lints.rust]
 # Set automatically by `cargo fuzz`; see the `parse_bytes_for_fuzzing` hooks.
-unexpected_cfgs = { level = "warn", check-cfg = ["cfg(fuzzing)"] }
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(fuzzing)", "cfg(coverage)"] }
 
 [dependencies]
 bigdecimal = "0.4"
