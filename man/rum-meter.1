@@ -156,6 +156,24 @@ A missing parent directory is exit 2 and is not created.
 Stdout stays empty.
 Exit codes stay 0, 1, 2 and 3.
 .TP
+.B --compare <FILE>
+Compare this run with a saved JSON report and print the difference.
+A module path, a type name, a tier name or an address is matched by that text.
+A change of rank does not give it a new number.
+It does not combine with
+.BR --json ,
+.BR --markdown ,
+.B --html
+or
+.BR --explain .
+That is exit 3.
+A missing file is exit 2.
+This is not a new threshold.
+Exit 1 stays
+.B --max-rum
+and
+.BR --max-increase .
+.TP
 .B -h, --help
 Print help.
 .TP
@@ -186,6 +204,8 @@ If several apply, the first of these wins:
 --hours-per-month only works together with --prices
 --top with diff only works together with --json
 --explain with diff only works together with --json
+--compare does not combine with --json, --markdown or --html
+--explain does not combine with --compare
 .fi
 .SH COMPLETIONS
 .B rum-meter completions bash
@@ -219,7 +239,9 @@ The report is still printed.
 .TP
 .B 2
 An input error.
-That includes an unreadable file, a path that is not a regular file, invalid JSON, a state that is not a JSON object, a state version other than 4, a duplicate address, the same state file given more than once, UTF-16 or UTF-32, an invalid price file, a monthly cost that overflows, a file larger than 128 MiB, or a resource label repeated across too many instances (a 32 MiB shared label budget).
+That includes an unreadable file, a path that is not a regular file, invalid JSON, a state that is not a JSON object, a state version other than 4, a duplicate address, the same state file given more than once, UTF-16 or UTF-32, an invalid price file, a monthly cost that overflows, a file larger than 128 MiB, a resource label repeated across too many instances (a 32 MiB shared label budget), or a
+.B --compare
+file that cannot be read or is not a rum-meter JSON report.
 Stdout is empty for these errors.
 A report that cannot be written to stdout is also exit 2, with
 .BR "rum-meter: cannot write report to stdout" .

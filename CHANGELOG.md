@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 ### Added
 
+- `--compare FILE` compares this run with a saved JSON report and prints the difference. A module path, type name, tier name or address keeps its text when its rank changes. It is not given a new number. Exit 1 stays the threshold. A missing file and a file over 128 MiB stay exit 2. Tests in `tests/compare_reports.rs`.
 - SIGINT stops the process with exit 130 and does not panic. An `--output` file is not left half-written: the previous file stays, or the new file is complete. Exit codes 0, 1, 2 and 3 are unchanged. A threshold stays 1. A missing output directory stays 2. A file over 128 MiB stays 2. Test in `tests/interrupt.rs`.
 - `--output PATH` writes the report to a file instead of stdout. An existing file is replaced. A missing parent directory is exit 2 and is not created. Exit codes stay 0, 1, 2 and 3. Tests in `tests/output_path.rs`.
 - `--quiet` and `--verbose`. A pipe prints no hint and no context line. `--verbose` adds that context on stderr. The report and the exit codes are unchanged. `--quiet` together with `--verbose` is exit 3. Tests in `tests/verbosity.rs`.

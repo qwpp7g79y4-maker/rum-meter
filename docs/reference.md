@@ -8,7 +8,7 @@ This page has the complete details. For an overview, see the [README](../README.
 
 Run `rum-meter --help`, `rum-meter count --help` or `rum-meter diff --help` for the built-in help. `count` takes one or more state files (`STATE`). `diff` takes the earlier file (`OLD`) and then the later file (`NEW`).
 
-A flag that would not change the report is exit 3, with one fixed line on stderr and nothing on stdout, before any file is read. If several apply, the first match wins: `--max-increase` on count, `--max-rum` on diff, `--hours-per-month` without `--prices`, then on diff without `--json` first `--top` and then `--explain`. `--json` does not change a refusal. With `--json`, `--top` and `--explain` on diff do apply, and the command exits 0. See [Exit codes and usage errors](#exit-codes-and-usage-errors).
+A flag that would not change the report is exit 3, with one fixed line on stderr and nothing on stdout, before any file is read. If several apply, the first match wins: `--max-increase` on count, `--max-rum` on diff, `--hours-per-month` without `--prices`, then on diff without `--json` first `--top` and then `--explain`. After those five, `--compare` together with `--json`, `--markdown` or `--html`, then `--explain` together with `--compare`. `--json` does not change a refusal. With `--json`, `--top` and `--explain` on diff do apply, and the command exits 0, except together with `--compare`, which is exit 3. See [Exit codes and usage errors](#exit-codes-and-usage-errors).
 
 | Option | Applies to | What it does |
 | --- | --- | --- |
@@ -24,6 +24,7 @@ A flag that would not change the report is exit 3, with one fixed line on stderr
 | `--quiet` | count and diff | Hide the hint line, also on a terminal. No context line. Stdout is unchanged. |
 | `--verbose` | count and diff | Print the hint line even when stderr is a pipe, and on success one `context:` line on stderr. Stdout is unchanged. Together with `--quiet` this is exit 3. |
 | `--output` | count and diff | Write the report to this file instead of stdout. An existing file is replaced. A missing parent directory is exit 2 and is not created. Stdout stays empty. Exit codes stay 0, 1, 2 and 3. |
+| `--compare` | count and diff | Compare this run with a saved JSON report and print the difference. A module path, type name, tier name or address is matched by that text. A change of rank does not give it a new number and does not list it as removed and added. Does not combine with `--json`, `--markdown`, `--html` or `--explain` (exit 3). A missing file, a directory, or a file over 128 MiB is exit 2. This is not a new threshold. Exit 1 stays `--max-rum` and `--max-increase`. |
 | `--help` | everywhere | Show help and exit 0. `-h` is the short form. |
 | `--version` | top level | Show `rum-meter 1.0.0` and exit 0. `-V` is the short form. |
 
@@ -137,6 +138,8 @@ An instance object has `file`, `address`, `counts` and `rule`. `deposed` is the 
 
 Text reports and error messages escape control characters, and invisible or bidirectional format characters such as U+200B and U+202E, in addresses, file paths and price labels as `\uXXXX`. JSON preserves the original strings.
 
+`--compare FILE` reads a report this tool wrote with `--json` and prints the difference between that report and this run, as text. Rows are matched by name. A module path, a type name, a tier name or an address that is in both reports keeps that text. A change of rank does not give it a new number. `--compare` does not combine with `--json`, `--markdown`, `--html` or `--explain` (exit 3). A missing file, a path that is not a regular file, a file over 128 MiB, or a file that is not such a report is exit 2. The threshold stays exit 1.
+
 ## Exit codes and usage errors
 
 Every exit-2 message below names what went wrong and, after a semicolon, what you can do about it.
@@ -145,7 +148,7 @@ Every exit-2 message below names what went wrong and, after a semicolon, what yo
 | --- | --- |
 | 0 | Success. An equal threshold is included. |
 | 1 | Threshold: summed RUM above `--max-rum` on count, or the RUM increase above `--max-increase` on diff. The report is still printed. |
-| 2 | Input error: unreadable file, not a regular file, invalid JSON, a state that is not a JSON object, state version not 4, UTF-16 or UTF-32, a duplicate address, the same state file given more than once, an invalid price file, or a cost that overflows. Stdout is empty. |
+| 2 | Input error: unreadable file, not a regular file, invalid JSON, a state that is not a JSON object, state version not 4, UTF-16 or UTF-32, a duplicate address, the same state file given more than once, an invalid price file, a cost that overflows, or a `--compare` file that cannot be read or is not a rum-meter JSON report. Stdout is empty. |
 | 3 | Usage error, including a flag that would not change the report. Stdout is empty. |
 | 130 | Interrupted by SIGINT. Not a success. An `--output` file is not left half-written. |
 
@@ -186,6 +189,10 @@ Every row below is run against the binary. The message is the whole stderr, and 
 | state file | count | A device is not a regular file (Linux and macOS). | `count /dev/null` | 2 | `rum-meter: /dev/null: not a regular file; pass a regular file, or - to read stdin\n` |
 | `--prices` | count | The price path is a device (Linux and macOS). | `count --prices /dev/null tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: /dev/null: not a regular file; pass a regular file, or - to read stdin\n` |
 | `--output` | count | The parent directory is missing. | `count --output tests/no-such-output-dir/report.txt tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: cannot write report to tests/no-such-output-dir/report.txt; check that the parent directory exists and is writable, the tool does not create it\n` |
+| `--compare` | count | The report file is missing. | `count --compare tests/fixtures/missing-compare.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/missing-compare.json: unreadable (not found); check that the path exists and that you may read it\n` |
+| `--compare` | count | The report path is a directory. | `count --compare tests/fixtures tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures: not a regular file; pass a regular file\n` |
+| `--compare` | count | Combined with `--json`. | `count --json --compare tests/fixtures/compare-count.json tests/fixtures/v4_one_managed.json` | 3 | `--compare does not combine with --json, --markdown or --html\n` |
+| `--compare` | count | Combined with `--explain`. | `count --explain --compare tests/fixtures/compare-count.json tests/fixtures/v4_one_managed.json` | 3 | `--explain does not combine with --compare\n` |
 
 ## Privacy and safety
 

@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "tool": "rum-meter",
+  "estimate": "HCP Terraform bills the hourly peak; this is a single snapshot",
+  "inputs": {
+    "old": "old",
+    "new": "new"
+  },
+  "total_rum": {
+    "old": 0,
+    "new": 0
+  },
+  "by_module": [],
+  "by_type": [],
+  "added": [],
+  "removed": [],
+  "changed_rule": [],
+  "rum_delta": 0
+}

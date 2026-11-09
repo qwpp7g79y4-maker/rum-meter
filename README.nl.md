@@ -260,13 +260,15 @@ changed rule:
 estimate: HCP Terraform bills the hourly peak; this is a single snapshot
 ```
 
-Exitcode 0 is gelukt. Exitcode 1 is een drempel: `--max-rum` bij `count`, `--max-increase` bij `diff`. Het rapport wordt toch afgedrukt. Exitcode 2 is een invoerfout (onleesbaar bestand, geen gewoon bestand, ongeldige JSON, een state die geen JSON-object is, stateversie niet 4, een dubbel adres, hetzelfde statebestand meer dan eens, UTF-16 of UTF-32, een ongeldig prijsbestand, kosten die overlopen, of een bestand groter dan 128 MiB). Exitcode 3 is een gebruiksfout. Een vlag die het rapport niet zou veranderen is ook exit 3, met een vaste melding op stderr en niets op stdout, vóór het lezen van de states. Staan er meer tegelijk, dan wint de eerste van deze:
+Exitcode 0 is gelukt. Exitcode 1 is een drempel: `--max-rum` bij `count`, `--max-increase` bij `diff`. Het rapport wordt toch afgedrukt. Exitcode 2 is een invoerfout (onleesbaar bestand, geen gewoon bestand, ongeldige JSON, een state die geen JSON-object is, stateversie niet 4, een dubbel adres, hetzelfde statebestand meer dan eens, UTF-16 of UTF-32, een ongeldig prijsbestand, kosten die overlopen, een bestand groter dan 128 MiB, of een `--compare`-bestand dat niet gelezen kan worden of geen rum-meter JSON-rapport is). Exitcode 3 is een gebruiksfout. Een vlag die het rapport niet zou veranderen is ook exit 3, met een vaste melding op stderr en niets op stdout, vóór het lezen van de states. Staan er meer tegelijk, dan wint de eerste van deze:
 
 - `--max-increase only works with diff`
 - `--max-rum only works with count`
 - `--hours-per-month only works together with --prices`
 - `--top with diff only works together with --json`
 - `--explain with diff only works together with --json`
+- `--compare does not combine with --json, --markdown or --html`
+- `--explain does not combine with --compare`
 
 Een rapport dat niet naar stdout geschreven kan worden is exit 2, met `rum-meter: cannot write report to stdout`, en een gesloten stdout is dezelfde fout. `--version` en `--help` die niet geschreven kunnen worden zijn exit 2, niet 0, met `rum-meter: cannot write message to stdout`. Een mislukte schrijfactie geeft geen panic, ook niet als stderr niet geschreven kan worden.
 
@@ -321,6 +323,7 @@ Dit zijn alle opties uit `rum-meter --help`. De commando's zijn `count` en `diff
 - `--quiet`: verberg de hintregel. Geen contextregel. Het rapport blijft hetzelfde.
 - `--verbose`: druk de hintregel, en bij succes één contextregel op stderr. Het rapport blijft hetzelfde.
 - `--output <PATH>`: schrijf het rapport naar dit bestand in plaats van stdout. Een bestaand bestand wordt vervangen. Een ontbrekende bovenliggende map is exit 2 en wordt niet aangemaakt. SIGINT is exit 130 en laat dit bestand niet half geschreven achter.
+- `--compare <FILE>`: vergelijk deze run met een opgeslagen JSON-rapport en toon het verschil. Een modulepad, een typenaam, een tiernaam of een adres houdt zijn tekst als de rang verandert. Het krijgt geen nieuw nummer. Niet te combineren met `--json`, `--markdown`, `--html` of `--explain`. Een ontbrekend bestand is exit 2. De drempel blijft exit 1.
 - `-h`, `--help`: druk de hulptekst.
 - `-V`, `--version`: druk de versie.
 

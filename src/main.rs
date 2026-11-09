@@ -16,6 +16,8 @@ const MAX_RUM_ONLY_COUNT: &str = "--max-rum only works with count";
 const HOURS_NEEDS_PRICES: &str = "--hours-per-month only works together with --prices";
 const TOP_DIFF_NEEDS_JSON: &str = "--top with diff only works together with --json";
 const EXPLAIN_DIFF_NEEDS_JSON: &str = "--explain with diff only works together with --json";
+const COMPARE_NEEDS_TEXT: &str = "--compare does not combine with --json, --markdown or --html";
+const EXPLAIN_NEEDS_NO_COMPARE: &str = "--explain does not combine with --compare";
 
 /// Shown under `--help`, `count --help` and `diff --help`. Same sentences as the stderr refusals.
 const USAGE_HELP: &str = "\
@@ -23,7 +25,9 @@ const USAGE_HELP: &str = "\
 --max-rum only works with count
 --hours-per-month only works together with --prices
 --top with diff only works together with --json
---explain with diff only works together with --json";
+--explain with diff only works together with --json
+--compare does not combine with --json, --markdown or --html
+--explain does not combine with --compare";
 
 // Debug: crate version, plus the git sha when git itself printed one.
 // Release: crate version only. See `build.rs`.
@@ -86,6 +90,10 @@ struct Cli {
     /// Write the report to this file instead of stdout
     #[arg(long, global = true, value_name = "PATH")]
     output: Option<PathBuf>,
+
+    /// Compare this run with a saved JSON report and print the difference
+    #[arg(long, global = true, value_name = "FILE")]
+    compare: Option<PathBuf>,
 
     #[command(subcommand)]
     command: Commands,
@@ -213,6 +221,7 @@ fn normalize_stdin_args() -> Vec<OsString> {
         "--max-rum",
         "--max-increase",
         "--output",
+        "--compare",
     ];
     let mut args: Vec<OsString> = std::env::args_os().collect();
     let mut index = 0;
@@ -318,6 +327,7 @@ enum CliError {
     ReportFile {
         path: PathBuf,
     },
+    Compare(rum_meter::compare::CompareError),
 }
 
 impl fmt::Display for CliError {
@@ -362,6 +372,7 @@ impl fmt::Display for CliError {
                     rum_meter::rum::escape_controls(&path.display().to_string())
                 )
             }
+            Self::Compare(err) => write!(f, "{err}"),
         }
     }
 }
@@ -379,6 +390,7 @@ impl CliError {
             Self::ReportFile { .. } => {
                 "check that the parent directory exists and is writable, the tool does not create it"
             }
+            Self::Compare(err) => err.hint(),
         }
     }
 }
@@ -474,7 +486,8 @@ enum RunOutcome {
 ///
 /// The first match wins: `--max-increase` on count, `--max-rum` on diff,
 /// `--hours-per-month` without `--prices`, then on diff without `--json`
-/// first `--top` and then `--explain`.
+/// first `--top` and then `--explain`, then `--compare` with a format flag,
+/// then `--explain` with `--compare`. The five checks above stay in that order.
 fn refused_option(cli: &Cli) -> Option<&'static str> {
     let is_diff = matches!(&cli.command, Commands::Diff { .. });
     if !is_diff && cli.max_increase.is_some() {
@@ -491,6 +504,12 @@ fn refused_option(cli: &Cli) -> Option<&'static str> {
     }
     if is_diff && cli.explain && !cli.json {
         return Some(EXPLAIN_DIFF_NEEDS_JSON);
+    }
+    if cli.compare.is_some() && (cli.json || cli.markdown || cli.html) {
+        return Some(COMPARE_NEEDS_TEXT);
+    }
+    if cli.compare.is_some() && cli.explain {
+        return Some(EXPLAIN_NEEDS_NO_COMPARE);
     }
     None
 }
@@ -544,7 +563,10 @@ fn execute(cli: &Cli) -> Result<RunOutcome, CliError> {
                 })?,
                 None => Vec::new(),
             };
-            let report = if cli.json {
+            let report = if let Some(path) = cli.compare.as_deref() {
+                rum_meter::compare::render_count_difference(path, &files, cli.top, &costs)
+                    .map_err(CliError::Compare)?
+            } else if cli.json {
                 rum_meter::render::render_count_json(&files, cli.explain, cli.top, &costs)
             } else if cli.markdown {
                 rum_meter::doc::render_count_markdown(&files, cli.explain, cli.top, &costs)
@@ -596,7 +618,23 @@ fn execute(cli: &Cli) -> Result<RunOutcome, CliError> {
                 }
                 None => Vec::new(),
             };
-            let report = if cli.json {
+            let report = if let Some(path) = cli.compare.as_deref() {
+                let costs = match &prices {
+                    Some((path, prices)) => rum_meter::cost::monthly_costs(new_rum, prices, hours)
+                        .map_err(|_| CliError::CostOverflow {
+                            path: path.to_path_buf(),
+                        })?,
+                    None => Vec::new(),
+                };
+                rum_meter::compare::render_diff_difference(
+                    path,
+                    &diff,
+                    &new_verdicts,
+                    cli.top,
+                    &costs,
+                )
+                .map_err(CliError::Compare)?
+            } else if cli.json {
                 let costs = match &prices {
                     Some((path, prices)) => rum_meter::cost::monthly_costs(new_rum, prices, hours)
                         .map_err(|_| CliError::CostOverflow {

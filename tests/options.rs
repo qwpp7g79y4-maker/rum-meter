@@ -262,6 +262,21 @@ const CASES: &[(&str, Case)] = &[
             },
         },
     ),
+    (
+        "--compare",
+        Case {
+            count: Expect::Output {
+                baseline: &[],
+                with: &["--compare", "tests/fixtures/compare-count.json"],
+                files: COUNT_FILES,
+            },
+            diff: Expect::Output {
+                baseline: &[],
+                with: &["--compare", "tests/fixtures/compare-diff.json"],
+                files: DIFF_FILES,
+            },
+        },
+    ),
 ];
 
 fn binary() -> Command {

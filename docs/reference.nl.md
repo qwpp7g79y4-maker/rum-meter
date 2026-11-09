@@ -10,7 +10,7 @@ De uitvoer van de tool is Engels, ook de meldingen in de tabel hieronder.
 
 Draai `rum-meter --help`, `rum-meter count --help` of `rum-meter diff --help` voor de ingebouwde hulp. `count` neemt een of meer statebestanden (`STATE`). `diff` neemt het eerdere bestand (`OLD`) en daarna het latere bestand (`NEW`).
 
-Een vlag die het rapport niet zou veranderen is exit 3, met één vaste regel op stderr en niets op stdout, vóór er een bestand wordt gelezen. Staan er meer tegelijk, dan wint de eerste: `--max-increase` bij count, `--max-rum` bij diff, `--hours-per-month` zonder `--prices`, en bij diff zonder `--json` eerst `--top` en dan `--explain`. `--json` verandert een weigering niet. Mét `--json` doen `--top` en `--explain` bij diff wél iets, en eindigt het commando met exit 0. Zie [Exitcodes en gebruiksfouten](#exitcodes-en-gebruiksfouten).
+Een vlag die het rapport niet zou veranderen is exit 3, met één vaste regel op stderr en niets op stdout, vóór er een bestand wordt gelezen. Staan er meer tegelijk, dan wint de eerste: `--max-increase` bij count, `--max-rum` bij diff, `--hours-per-month` zonder `--prices`, en bij diff zonder `--json` eerst `--top` en dan `--explain`. Daarna `--compare` samen met `--json`, `--markdown` of `--html`, en dan `--explain` samen met `--compare`. `--json` verandert een weigering niet. Mét `--json` doen `--top` en `--explain` bij diff wél iets, en eindigt het commando met exit 0, behalve samen met `--compare`: dat is exit 3. Zie [Exitcodes en gebruiksfouten](#exitcodes-en-gebruiksfouten).
 
 | Optie | Werkt bij | Wat het doet |
 | --- | --- | --- |
@@ -26,6 +26,7 @@ Een vlag die het rapport niet zou veranderen is exit 3, met één vaste regel op
 | `--quiet` | count en diff | Verberg de hintregel, ook op een terminal. Geen contextregel. Stdout blijft gelijk. |
 | `--verbose` | count en diff | Druk de hintregel ook als stderr een pipe is, en bij succes één regel `context:` op stderr. Stdout blijft gelijk. Samen met `--quiet` is dit exit 3. |
 | `--output` | count en diff | Schrijf het rapport naar dit bestand in plaats van stdout. Een bestaand bestand wordt vervangen. Een ontbrekende bovenliggende map is exit 2 en wordt niet aangemaakt. Stdout blijft leeg. De exitcodes blijven 0, 1, 2 en 3. |
+| `--compare` | count en diff | Vergelijk deze run met een opgeslagen JSON-rapport en toon het verschil. Een modulepad, typenaam, tiernaam of adres wordt op die tekst gematcht. Een andere rang geeft geen nieuw nummer en zet het pad niet op removed én added. Niet te combineren met `--json`, `--markdown`, `--html` of `--explain` (exit 3). Een ontbrekend bestand, een map, of een bestand boven 128 MiB is exit 2. Dit is geen nieuwe drempel. Exit 1 blijft `--max-rum` en `--max-increase`. |
 | `--help` | overal | Toon de hulp en exit 0. `-h` is de korte vorm. |
 | `--version` | alleen het topniveau | Toon `rum-meter 1.0.0` en exit 0. `-V` is de korte vorm. |
 
@@ -139,6 +140,8 @@ Een instantie-object heeft `file`, `address`, `counts` en `rule`. `deposed` is d
 
 Tekstrapporten en foutmeldingen escapen stuurtekens, en onzichtbare of tekstrichting-wijzigende opmaaktekens zoals U+200B en U+202E, in adressen, bestandspaden en prijslabels als `\uXXXX`. JSON bewaart de oorspronkelijke tekens.
 
+`--compare FILE` leest een rapport dat deze tool met `--json` schreef en toont het verschil tussen dat rapport en deze run, als tekst. Rijen worden op naam gematcht. Een modulepad, een typenaam, een tiernaam of een adres dat in beide rapporten staat houdt die tekst. Een andere rang geeft geen nieuw nummer. `--compare` is niet te combineren met `--json`, `--markdown`, `--html` of `--explain` (exit 3). Een ontbrekend bestand, een pad dat geen gewoon bestand is, een bestand boven 128 MiB, of een bestand dat zo'n rapport niet is, is exit 2. De drempel blijft exit 1.
+
 ## Exitcodes en gebruiksfouten
 
 Elke exit-2-melding hieronder noemt wat er misging en, na een puntkomma, wat je eraan kunt doen.
@@ -147,7 +150,7 @@ Elke exit-2-melding hieronder noemt wat er misging en, na een puntkomma, wat je 
 | --- | --- |
 | 0 | Gelukt. Een gelijke drempel hoort daarbij. |
 | 1 | Drempel: opgetelde RUM boven `--max-rum` bij count, of de RUM-stijging boven `--max-increase` bij diff. Het rapport wordt toch afgedrukt. |
-| 2 | Invoerfout: onleesbaar bestand, geen gewoon bestand, ongeldige JSON, een state die geen JSON-object is, stateversie niet 4, UTF-16 of UTF-32, een dubbel adres, hetzelfde statebestand meer dan eens, een ongeldig prijsbestand, of kosten die overlopen. Stdout is leeg. |
+| 2 | Invoerfout: onleesbaar bestand, geen gewoon bestand, ongeldige JSON, een state die geen JSON-object is, stateversie niet 4, UTF-16 of UTF-32, een dubbel adres, hetzelfde statebestand meer dan eens, een ongeldig prijsbestand, kosten die overlopen, of een `--compare`-bestand dat niet gelezen kan worden of geen rum-meter JSON-rapport is. Stdout is leeg. |
 | 3 | Gebruiksfout, ook een vlag die het rapport niet zou veranderen. Stdout is leeg. |
 | 130 | Onderbroken door SIGINT. Geen succes. Een `--output`-bestand blijft niet half geschreven. |
 
@@ -188,6 +191,10 @@ Elke rij hieronder draait tegen de binary. De melding is de hele stderr, en `\n`
 | statebestand | count | Een apparaat is geen gewoon bestand (Linux en macOS). | `count /dev/null` | 2 | `rum-meter: /dev/null: not a regular file; pass a regular file, or - to read stdin\n` |
 | `--prices` | count | Het prijzenpad is een apparaat (Linux en macOS). | `count --prices /dev/null tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: /dev/null: not a regular file; pass a regular file, or - to read stdin\n` |
 | `--output` | count | De bovenliggende map ontbreekt. | `count --output tests/no-such-output-dir/report.txt tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: cannot write report to tests/no-such-output-dir/report.txt; check that the parent directory exists and is writable, the tool does not create it\n` |
+| `--compare` | count | Het rapportbestand ontbreekt. | `count --compare tests/fixtures/missing-compare.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/missing-compare.json: unreadable (not found); check that the path exists and that you may read it\n` |
+| `--compare` | count | Het rapportpad is een map. | `count --compare tests/fixtures tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures: not a regular file; pass a regular file\n` |
+| `--compare` | count | Samen met `--json`. | `count --json --compare tests/fixtures/compare-count.json tests/fixtures/v4_one_managed.json` | 3 | `--compare does not combine with --json, --markdown or --html\n` |
+| `--compare` | count | Samen met `--explain`. | `count --explain --compare tests/fixtures/compare-count.json tests/fixtures/v4_one_managed.json` | 3 | `--explain does not combine with --compare\n` |
 
 ## Privacy en veiligheid
 

@@ -256,13 +256,15 @@ changed rule:
 estimate: HCP Terraform bills the hourly peak; this is a single snapshot
 ```
 
-Exit code 0 is success. Exit code 1 is a threshold: `--max-rum` on `count`, `--max-increase` on `diff`. The report is still printed. Exit code 2 is an input error (unreadable file, not a regular file, invalid JSON, a state that is not a JSON object, state version not 4, a duplicate address, the same state file given more than once, UTF-16 or UTF-32, an invalid price file, a cost that overflows, or a file larger than 128 MiB). Exit code 3 is a usage error. A flag that would not change the report is also exit 3, with a fixed message on stderr and nothing on stdout, before the states are read. If several apply, the first of these wins:
+Exit code 0 is success. Exit code 1 is a threshold: `--max-rum` on `count`, `--max-increase` on `diff`. The report is still printed. Exit code 2 is an input error (unreadable file, not a regular file, invalid JSON, a state that is not a JSON object, state version not 4, a duplicate address, the same state file given more than once, UTF-16 or UTF-32, an invalid price file, a cost that overflows, a file larger than 128 MiB, or a `--compare` file that cannot be read or is not a rum-meter JSON report). Exit code 3 is a usage error. A flag that would not change the report is also exit 3, with a fixed message on stderr and nothing on stdout, before the states are read. If several apply, the first of these wins:
 
 - `--max-increase only works with diff`
 - `--max-rum only works with count`
 - `--hours-per-month only works together with --prices`
 - `--top with diff only works together with --json`
 - `--explain with diff only works together with --json`
+- `--compare does not combine with --json, --markdown or --html`
+- `--explain does not combine with --compare`
 
 A report that cannot be written to stdout is exit 2, with `rum-meter: cannot write report to stdout`, and a closed stdout is the same error. `--version` and `--help` that cannot be written are exit 2, not 0, with `rum-meter: cannot write message to stdout`. A failed write does not panic, even when stderr cannot be written.
 
@@ -319,6 +321,7 @@ These are all the options of `rum-meter --help`. The commands are `count` and `d
 - `--quiet`: hide the hint line. No context line. The report stays the same.
 - `--verbose`: print the hint line, and on success one context line on stderr. The report stays the same.
 - `--output <PATH>`: write the report to this file instead of stdout. An existing file is replaced. A missing parent directory is exit 2 and is not created. SIGINT is exit 130 and does not leave this file half-written.
+- `--compare <FILE>`: compare this run with a saved JSON report and print the difference. A module path, type name, tier name or address keeps its text when its rank changes. It is not given a new number. Does not combine with `--json`, `--markdown`, `--html` or `--explain`. A missing file is exit 2. The threshold stays exit 1.
 - `-h`, `--help`: print help.
 - `-V`, `--version`: print the version.
 
