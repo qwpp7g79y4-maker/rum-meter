@@ -7,8 +7,8 @@ This page shows how each release of rum-meter was checked before it was publishe
 | | |
 |---|---|
 | Version | 1.0.0 (not published from this branch) |
-| Commit measured | `decfa7b` (branch prep/w24-fout) |
-| Tests | 286 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debug mode) |
+| Commit measured | `79bc956` (branch prep/w24-fout) |
+| Tests | 315 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debug mode) |
 | Lints | `cargo fmt --check` and `cargo clippy --all-targets -- -D warnings` clean |
 
 ## Test count (pre-release 1.0.0)
@@ -28,7 +28,7 @@ This page shows how each release of rum-meter was checked before it was publishe
 | Line coverage | 96.78% (2920 lines, 94 missed), as printed by the command |
 | Goal of 90% or more | Met. No tests were added for coverage. |
 
-One test is skipped in the coverage run only: `symlink_becomes_fifo_between_name_and_open_exits_2` in `tests/regular_file.rs`. It traces the child with ptrace and allows 2 seconds. In a plain `cargo test` it takes about 1.7 seconds and passes. The binary built by llvm-cov is instrumented and writes a `.profraw` file when it exits, which takes it over the 2 second limit, so it fails in 2 of 3 runs there. The test is unchanged and runs in the normal `cargo test`. The skipped test covers a race in the open of a path. Its lines are in `src/regular.rs`, which is at 93.48% without it.
+One test is skipped in the coverage run only: `symlink_becomes_fifo_between_name_and_open_exits_2` in `tests/regular_file.rs`. It traces the child with ptrace and allows 2 seconds. In a plain `cargo test` it takes about 1.7 seconds and passes. The binary built by llvm-cov is instrumented and writes a `.profraw` file when it exits, which takes it over the 2 second limit, so it fails in 2 of 3 runs there. The test runs in the normal `cargo test`. The skipped test covers a race in the open of a path. Its lines are in `src/regular.rs`, which is at 93.48% without it.
 
 ## Measured time on a 100 MiB input (pre-release 1.0.0)
 

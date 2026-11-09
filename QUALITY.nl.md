@@ -7,8 +7,8 @@ Deze pagina laat zien hoe elke release van rum-meter is gecontroleerd voordat hi
 | | |
 |---|---|
 | Versie | 1.0.0 (niet gepubliceerd vanaf deze tak) |
-| Gemeten commit | `decfa7b` (tak prep/w24-fout) |
-| Tests | 286 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debugmodus) |
+| Gemeten commit | `79bc956` (tak prep/w24-fout) |
+| Tests | 315 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debugmodus) |
 | Lints | `cargo fmt --check` en `cargo clippy --all-targets -- -D warnings` schoon |
 
 ## Testaantal (pre-release 1.0.0)
@@ -28,7 +28,7 @@ Deze pagina laat zien hoe elke release van rum-meter is gecontroleerd voordat hi
 | Regeldekking | 96.78% (2920 regels, 94 gemist), zoals het commando het afdrukt |
 | Doel van 90% of meer | Gehaald. Er zijn geen tests voor de dekking toegevoegd. |
 
-Eén test wordt alleen in de dekkingsrun overgeslagen: `symlink_becomes_fifo_between_name_and_open_exits_2` in `tests/regular_file.rs`. Hij traceert het kindproces met ptrace en staat 2 seconden toe. In een gewone `cargo test` duurt hij ongeveer 1.7 seconden en slaagt hij. Het binary dat llvm-cov bouwt is geïnstrumenteerd en schrijft bij het afsluiten een `.profraw`-bestand, waardoor hij over de limiet van 2 seconden gaat en daar in 2 van 3 runs faalt. De test is ongewijzigd en draait in de normale `cargo test`. De overgeslagen test dekt een race bij het openen van een pad. Zijn regels staan in `src/regular.rs`, dat zonder hem op 93.48% staat.
+Eén test wordt alleen in de dekkingsrun overgeslagen: `symlink_becomes_fifo_between_name_and_open_exits_2` in `tests/regular_file.rs`. Hij traceert het kindproces met ptrace en staat 2 seconden toe. In een gewone `cargo test` duurt hij ongeveer 1.7 seconden en slaagt hij. Het binary dat llvm-cov bouwt is geïnstrumenteerd en schrijft bij het afsluiten een `.profraw`-bestand, waardoor hij over de limiet van 2 seconden gaat en daar in 2 van 3 runs faalt. De test draait in de normale `cargo test`. De overgeslagen test dekt een race bij het openen van een pad. Zijn regels staan in `src/regular.rs`, dat zonder hem op 93.48% staat.
 
 ## Gemeten tijd op een invoer van 100 MiB (pre-release 1.0.0)
 

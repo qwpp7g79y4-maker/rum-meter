@@ -7,7 +7,7 @@
 
 use std::fs;
 use std::io::Read;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -215,11 +215,17 @@ fn symlink_to_regular_file_counts() {
 
 /// The path is a regular file at the name and a symlink to a FIFO at the open.
 /// The process must exit 2 within 2 seconds, not block in `open`.
+///
+/// The directory name includes the process id and the time, so another
+/// `cargo test` cannot remove this run's symlink before the swap.
 #[cfg(all(target_os = "linux", target_arch = "x86_64", not(coverage)))]
 #[test]
 fn symlink_becomes_fifo_between_name_and_open_exits_2() {
-    let dir = temp_dir().join("race");
-    let _ = fs::remove_dir_all(&dir);
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    let dir = temp_dir().join(format!("race-{}-{nanos}", std::process::id()));
     fs::create_dir_all(&dir).expect("race dir");
     let real = dir.join("real.json");
     fs::write(
@@ -267,7 +273,6 @@ fn symlink_becomes_fifo_between_name_and_open_exits_2() {
     .expect("set options");
     trace::ptrace(trace::PTRACE_SYSCALL, pid, 0, 0).expect("resume");
 
-    let mut entering = true;
     let mut swapped = false;
     let code = loop {
         if start.elapsed() >= limit {
@@ -285,11 +290,12 @@ fn symlink_becomes_fifo_between_name_and_open_exits_2() {
             break code;
         }
         if trace::stop_signal(status) == Some(trace::SIGTRAP | 0x80) {
-            if entering && !swapped && trace::open_path_is(pid, &link_bytes) {
-                fs::rename(&fifo_link, &link).expect("swap symlink to fifo");
+            // Swap only at syscall entry (`rax` is still `-ENOSYS`). The kernel
+            // has not resolved the path, and the child stays stopped.
+            if !swapped && trace::open_entry_is(pid, &link_bytes) {
+                replace_link_with_fifo(&link, &fifo_link, &fifo);
                 swapped = true;
             }
-            entering = !entering;
             trace::ptrace(trace::PTRACE_SYSCALL, pid, 0, 0).expect("resume syscall");
         } else if let Some(sig) = trace::stop_signal(status) {
             let deliver = if sig == trace::SIGTRAP {
@@ -332,6 +338,39 @@ fn symlink_becomes_fifo_between_name_and_open_exits_2() {
         stderr.contains("not a regular file"),
         "the message lacks 'not a regular file':\n{stderr}"
     );
+    let _ = fs::remove_dir_all(&dir);
+}
+
+/// Make `link` a symlink to `fifo` while the child is stopped before `open`.
+///
+/// Replacing the prepared symlink is atomic. `rename` can return `EINTR`, or
+/// `ENOENT` if the prepared name was removed. The child is not running, so
+/// unlink plus symlink cannot be observed and cannot block the open.
+#[cfg(all(target_os = "linux", target_arch = "x86_64", not(coverage)))]
+fn replace_link_with_fifo(link: &Path, fifo_link: &Path, fifo: &Path) {
+    let mut rename_err = None;
+    for _ in 0..8 {
+        match fs::rename(fifo_link, link) {
+            Ok(()) => return,
+            Err(err) if err.kind() == std::io::ErrorKind::Interrupted => {
+                rename_err = Some(err);
+            }
+            Err(err) => {
+                rename_err = Some(err);
+                break;
+            }
+        }
+    }
+    match fs::remove_file(link) {
+        Ok(()) => {}
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
+        Err(err) => {
+            panic!("swap symlink to fifo: remove {link:?}: {err}; rename: {rename_err:?}")
+        }
+    }
+    if let Err(err) = std::os::unix::fs::symlink(fifo, link) {
+        panic!("swap symlink to fifo: symlink {fifo:?} -> {link:?}: {err}; rename: {rename_err:?}");
+    }
 }
 
 #[cfg(all(target_os = "linux", target_arch = "x86_64", not(coverage)))]
@@ -350,7 +389,6 @@ impl Drop for ChildGuard {
 /// x86_64 Linux ptrace. Syscall numbers and register slots are the kernel ABI.
 #[cfg(all(target_os = "linux", target_arch = "x86_64", not(coverage)))]
 mod trace {
-    use std::io::{Read, Seek, SeekFrom};
 
     pub const PTRACE_SYSCALL: i64 = 24;
     pub const PTRACE_SETOPTIONS: i64 = 0x4200;
@@ -364,12 +402,16 @@ mod trace {
     const SYS_OPENAT2: u64 = 437;
     const SYS_PTRACE: i64 = 101;
     const SYS_WAIT4: i64 = 61;
+    /// `user_regs_struct.rax`. `-ENOSYS` here means syscall-enter-stop.
+    const RAX: usize = 10;
     /// `user_regs_struct.rsi` on x86_64.
     const RSI: usize = 13;
     /// `user_regs_struct.rdi` on x86_64. Pathname argument of `open`.
     const RDI: usize = 14;
     /// `user_regs_struct.orig_rax`: the syscall number.
     const ORIG_RAX: usize = 15;
+    /// Linux `ENOSYS`. The kernel writes `-ENOSYS` to `rax` before the call.
+    const ENOSYS: i64 = 38;
 
     pub fn traceme() -> std::io::Result<()> {
         let rc = syscall4(SYS_PTRACE, PTRACE_TRACEME, 0, 0, 0);
@@ -432,9 +474,13 @@ mod trace {
         }
     }
 
-    pub fn open_path_is(pid: i32, want: &[u8]) -> bool {
+    /// True only at syscall entry, before the kernel resolves `want`.
+    pub fn open_entry_is(pid: i32, want: &[u8]) -> bool {
         let mut regs = [0u64; 27];
         if ptrace(PTRACE_GETREGS, pid, 0, regs.as_mut_ptr() as i64).is_err() {
+            return false;
+        }
+        if regs[RAX] != (-ENOSYS) as u64 {
             return false;
         }
         let addr = match regs[ORIG_RAX] {
@@ -446,12 +492,26 @@ mod trace {
     }
 
     fn read_cstr(pid: i32, addr: u64) -> Option<Vec<u8>> {
-        let mut mem = std::fs::File::open(format!("/proc/{pid}/mem")).ok()?;
-        mem.seek(SeekFrom::Start(addr)).ok()?;
-        let mut buf = [0u8; 4096];
-        let n = mem.read(&mut buf).ok()?;
-        let end = buf[..n].iter().position(|byte| *byte == 0).unwrap_or(n);
-        Some(buf[..end].to_vec())
+        use std::os::unix::fs::FileExt;
+        let mem = std::fs::File::open(format!("/proc/{pid}/mem")).ok()?;
+        let mut out = Vec::new();
+        let mut buf = [0u8; 256];
+        let mut at = addr;
+        // `pread`. A seek plus `read` on `/proc/pid/mem` can return a short
+        // count at a page boundary, so keep reading until the NUL.
+        while out.len() < 4096 {
+            let n = mem.read_at(&mut buf, at).ok()?;
+            if n == 0 {
+                return None;
+            }
+            if let Some(end) = buf[..n].iter().position(|byte| *byte == 0) {
+                out.extend_from_slice(&buf[..end]);
+                return Some(out);
+            }
+            out.extend_from_slice(&buf[..n]);
+            at += u64::try_from(n).ok()?;
+        }
+        None
     }
 
     fn errno_code(rc: i64) -> i32 {
