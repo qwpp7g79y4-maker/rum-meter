@@ -101,7 +101,7 @@ fn temp_dir() -> PathBuf {
     dir
 }
 
-#[cfg(unix)]
+#[cfg(all(unix, not(coverage)))]
 fn make_fifo() -> String {
     let path = temp_dir().join("no-writer.fifo");
     let _ = fs::remove_file(&path);
@@ -126,7 +126,7 @@ fn a_directory_as_state_or_prices_exits_2_on_every_os() {
     assert_not_regular("prices", &dir, &as_prices);
 }
 
-#[cfg(unix)]
+#[cfg(all(unix, not(coverage)))]
 #[test]
 fn non_regular_state_and_price_paths_exit_2_without_reading() {
     let good_state = fixture("v4_one_managed.json");
@@ -159,7 +159,7 @@ fn non_regular_state_and_price_paths_exit_2_without_reading() {
 
 /// A symlink to a FIFO is the FIFO. The open follows the link and exits 2
 /// without waiting for a writer.
-#[cfg(unix)]
+#[cfg(all(unix, not(coverage)))]
 #[test]
 fn symlink_to_fifo_exits_2_within_2s() {
     let good_state = fixture("v4_one_managed.json");
