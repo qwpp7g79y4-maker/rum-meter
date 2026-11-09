@@ -35,6 +35,7 @@ The previous version is 0.1.3.
 - CI runs one workflow per ref at a time, has a job timeout, skips draft pull requests and caches the Cargo build.
 - The copyright line in the licenses and READMEs reads `2025-2026 PEPAI / Pepijn de Jonge`.
 - README and README.nl state the test count (237), the same number as the pre-release section of `QUALITY.md` and `QUALITY.nl.md`.
+- README, README.nl, `QUALITY.md` and `QUALITY.nl.md` state the measured test count (315) for commit `662813e`.
 
 ### Fixed
 

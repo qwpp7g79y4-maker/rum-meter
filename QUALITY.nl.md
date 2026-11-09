@@ -11,6 +11,13 @@ Deze pagina laat zien hoe elke release van rum-meter is gecontroleerd voordat hi
 | Tests | 286 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debugmodus) |
 | Lints | `cargo fmt --check` en `cargo clippy --all-targets -- -D warnings` schoon |
 
+## Testaantal (pre-release 1.0.0)
+
+| | |
+|---|---|
+| Gemeten commit | `662813e` (tak prep/w24-fout) |
+| Tests | 315 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debugmodus) |
+
 ## Regeldekking (pre-release 1.0.0)
 
 | | |
