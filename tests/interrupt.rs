@@ -162,6 +162,7 @@ fn only_file(dir: &Path, name: &str) {
     assert_eq!(names, vec![std::ffi::OsString::from(name)]);
 }
 
+#[cfg(not(coverage))]
 #[test]
 fn sigint_exits_130_and_leaves_the_report_intact() {
     let root = ScratchGuard(scratch());
