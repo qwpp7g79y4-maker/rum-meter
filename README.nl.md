@@ -18,7 +18,9 @@ HCP Terraform rekent per RUM af. Een team ziet die telling op de billingpagina, 
 
 ## Installatie
 
-Met Rust 1.85 of nieuwer installeer je vanaf [crates.io](https://crates.io/crates/rum-meter):
+Versie 1.0.0 is release-klaar en nog niet gepubliceerd. `cargo install rum-meter` vanaf [crates.io](https://crates.io/crates/rum-meter) geeft nog 0.1.3. Versie 1.0.0 komt uit de bron: `cargo install --path .`.
+
+Met Rust 1.85 of nieuwer is de crate op [crates.io](https://crates.io/crates/rum-meter) nog 0.1.3:
 
 ```sh
 cargo install --locked rum-meter
@@ -29,7 +31,7 @@ Kant-en-klare binaries voor Linux (x86_64, glibc en musl), Windows (x86_64) en m
 
 Voor de nieuwste `main`: `cargo install --locked --git https://github.com/qwpp7g79y4-maker/rum-meter`.
 
-Vanuit een lokale clone: `cargo install --locked --path .`, of `cargo build --release`; de binary is `target/release/rum-meter`.
+Vanuit een lokale clone van deze 1.0.0-bron: `cargo install --path .` (of `cargo install --locked --path .`), of `cargo build --release`; de binary is `target/release/rum-meter`.
 
 ## Systeemvereisten
 
