@@ -1,0 +1,22 @@
+{
+  "name": "rum-meter",
+  "displayName": "RUM Meter",
+  "version": "0.1.3",
+  "description": "Estimate billable HCP Terraform RUM from local Terraform state files, offline.",
+  "author": {
+    "name": "PEPAI",
+    "url": "https://github.com/qwpp7g79y4-maker"
+  },
+  "homepage": "https://github.com/qwpp7g79y4-maker/rum-meter",
+  "repository": "https://github.com/qwpp7g79y4-maker/rum-meter",
+  "license": "MIT OR Apache-2.0",
+  "keywords": [
+    "terraform",
+    "hcp",
+    "cost",
+    "rum",
+    "cli"
+  ],
+  "documentationUrl": "https://github.com/qwpp7g79y4-maker/rum-meter",
+  "supportUrl": "https://github.com/qwpp7g79y4-maker/rum-meter/issues"
+}
