@@ -6,13 +6,7 @@ Count billable HCP Terraform resources in a local state file, before the invoice
 
 [![crates.io](https://img.shields.io/crates/v/rum-meter.svg)](https://crates.io/crates/rum-meter) [![downloads](https://img.shields.io/crates/d/rum-meter.svg)](https://crates.io/crates/rum-meter) [![CI](https://github.com/qwpp7g79y4-maker/rum-meter/actions/workflows/ci.yml/badge.svg)](https://github.com/qwpp7g79y4-maker/rum-meter/actions/workflows/ci.yml) [![PEPAI checked](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fqwpp7g79y4-maker%2Frum-meter%2Fmain%2F.github%2Fbadge.json)](QUALITY.md) [![MSRV 1.85](https://img.shields.io/badge/MSRV-1.85-blue.svg)](https://github.com/qwpp7g79y4-maker/rum-meter/blob/main/Cargo.toml) [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 
-[Installation](#installation) • [Quick start](#quick-start) • [Example](#example) • [Options](#options) • [How it counts](#how-it-counts) • [Alternatives](#compared-with-alternatives) • [Limitations](#limitations) • [Reference](docs/reference.md)
-
 rum-meter is a command-line tool written in Rust. It reads `terraform.tfstate` files of format version 4 and counts billable HCP Terraform Resources Under Management (RUM) from HashiCorp's definition. It explains each instance, breaks the total down by module and by type, estimates a monthly cost from a price file you supply, and diffs two states. It needs no account and makes no network connection. The result is an estimate.
-
-## Why
-
-HCP Terraform bills per RUM. A team sees that count on the billing page afterwards, without a per-resource explanation. rum-meter shows, beforehand and on your machine, how much RUM a state has, which module and type it sits in, and what a change adds or removes. This is a plausible scenario, not a confirmed complaint: no verified report of a team disputing an HCP Terraform RUM bill was found. Willingness to pay was not investigated. The HashiCorp sentences this follows were checked on 7 October 2026 and are quoted under [Compared with alternatives](#compared-with-alternatives).
 
 ## Installation
 
@@ -30,34 +24,6 @@ Ready-made binaries for Linux (x86_64, glibc and musl), Windows (x86_64) and mac
 For the latest `main`: `cargo install --locked --git https://github.com/qwpp7g79y4-maker/rum-meter`.
 
 From a local clone of this 1.0.0 source: `cargo install --path .` (or `cargo install --locked --path .`), or `cargo build --release`; the binary is `target/release/rum-meter`.
-
-## System requirements
-
-| Platform | Release archive | Requirement |
-|---|---|---|
-| Linux x86_64 | `x86_64-unknown-linux-gnu` | glibc 2.34 or newer (for example Ubuntu 22.04, Debian 12, RHEL 9) |
-| Linux x86_64 | `x86_64-unknown-linux-musl` | none; statically linked, also for Alpine and older distributions |
-| macOS Apple Silicon | `aarch64-apple-darwin` | macOS 11 or newer |
-| macOS Intel | `x86_64-apple-darwin` | macOS 10.12 or newer |
-| Windows x86_64 | `x86_64-pc-windows-msvc` | Windows 10 or newer |
-
-The binaries are built and smoke-tested on GitHub runners (Ubuntu, macOS on Apple Silicon and Intel, Windows). Building from source needs Rust 1.85 or newer on any platform Rust supports.
-
-## Aan de slag in 5 minuten
-
-Install rum-meter as in Installation and put it on your `PATH`. Run the
-commands below from the repository root. They read the fictional state files in
-`examples/`: no network, no HCP Terraform account, no file from this machine.
-The test `tests/readme_quickstart.rs` runs these lines literally.
-
-```sh
-rum-meter count examples/one-managed.tfstate
-rum-meter count --explain examples/web-stack.tfstate
-rum-meter diff examples/web-stack.tfstate examples/web-stack-next.tfstate
-```
-
-Each command exits 0. Their output is stored in `examples/one-managed.count.txt`,
-`examples/web-stack.count.txt` and `examples/web-stack.diff.txt`.
 
 ## Quick start
 
@@ -273,6 +239,38 @@ A report that cannot be written to stdout is exit 2, with `rum-meter: cannot wri
 All options, exit codes and error messages are listed in the [reference](docs/reference.md) and in `rum-meter --help`.
 The manual page is [`man/rum-meter.1`](man/rum-meter.1).
 `rum-meter --help` lists the commands `count`, `diff` and `help`.
+
+## Aan de slag in 5 minuten
+
+Install rum-meter as in Installation and put it on your `PATH`. Run the
+commands below from the repository root. They read the fictional state files in
+`examples/`: no network, no HCP Terraform account, no file from this machine.
+The test `tests/readme_quickstart.rs` runs these lines literally.
+
+```sh
+rum-meter count examples/one-managed.tfstate
+rum-meter count --explain examples/web-stack.tfstate
+rum-meter diff examples/web-stack.tfstate examples/web-stack-next.tfstate
+```
+
+Each command exits 0. Their output is stored in `examples/one-managed.count.txt`,
+`examples/web-stack.count.txt` and `examples/web-stack.diff.txt`.
+
+## System requirements
+
+| Platform | Release archive | Requirement |
+|---|---|---|
+| Linux x86_64 | `x86_64-unknown-linux-gnu` | glibc 2.34 or newer (for example Ubuntu 22.04, Debian 12, RHEL 9) |
+| Linux x86_64 | `x86_64-unknown-linux-musl` | none; statically linked, also for Alpine and older distributions |
+| macOS Apple Silicon | `aarch64-apple-darwin` | macOS 11 or newer |
+| macOS Intel | `x86_64-apple-darwin` | macOS 10.12 or newer |
+| Windows x86_64 | `x86_64-pc-windows-msvc` | Windows 10 or newer |
+
+The binaries are built and smoke-tested on GitHub runners (Ubuntu, macOS on Apple Silicon and Intel, Windows). Building from source needs Rust 1.85 or newer on any platform Rust supports.
+
+## Why
+
+HCP Terraform bills per RUM. A team sees that count on the billing page afterwards, without a per-resource explanation. rum-meter shows, beforehand and on your machine, how much RUM a state has, which module and type it sits in, and what a change adds or removes. This is a plausible scenario, not a confirmed complaint: no verified report of a team disputing an HCP Terraform RUM bill was found. Willingness to pay was not investigated. The HashiCorp sentences this follows were checked on 7 October 2026 and are quoted under [Compared with alternatives](#compared-with-alternatives).
 
 ## Example
 
