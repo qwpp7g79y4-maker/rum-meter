@@ -16,12 +16,14 @@ HCP Terraform bills per RUM. A team sees that count on the billing page afterwar
 
 ## Installation
 
-Version 1.0.0 is published. With Rust 1.85 or newer, install from [crates.io](https://crates.io/crates/rum-meter):
+Version 1.0.0 is on [crates.io](https://crates.io/crates/rum-meter). With Rust 1.85 or newer:
 
 ```sh
-cargo install --locked rum-meter
+cargo install rum-meter
 rum-meter --help
 ```
+
+`cargo install --locked rum-meter` pins the crate's lockfile.
 
 Ready-made binaries for Linux (x86_64, glibc and musl), Windows (x86_64) and macOS (Intel and Apple Silicon), each with a SHA-256 checksum, are on the [Releases page](https://github.com/qwpp7g79y4-maker/rum-meter/releases). Unpack the archive and put `rum-meter` on your `PATH`.
 
