@@ -6,15 +6,9 @@ Tel factureerbare HCP Terraform-resources in een lokaal statebestand, vóór de 
 
 [![crates.io](https://img.shields.io/crates/v/rum-meter.svg)](https://crates.io/crates/rum-meter) [![downloads](https://img.shields.io/crates/d/rum-meter.svg)](https://crates.io/crates/rum-meter) [![CI](https://github.com/qwpp7g79y4-maker/rum-meter/actions/workflows/ci.yml/badge.svg)](https://github.com/qwpp7g79y4-maker/rum-meter/actions/workflows/ci.yml) [![PEPAI gecontroleerd](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fqwpp7g79y4-maker%2Frum-meter%2Fmain%2F.github%2Fbadge.json)](QUALITY.nl.md) [![MSRV 1.85](https://img.shields.io/badge/MSRV-1.85-blue.svg)](https://github.com/qwpp7g79y4-maker/rum-meter/blob/main/Cargo.toml) [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#licentie)
 
-[Installatie](#installatie) • [Snel aan de slag](#snel-aan-de-slag) • [Voorbeeld](#voorbeeld) • [Opties](#opties) • [Hoe het rekent](#hoe-het-rekent) • [Alternatieven](#vergelijking-met-alternatieven) • [Beperkingen](#beperkingen) • [Referentie](docs/reference.nl.md)
-
 rum-meter is een opdrachtregelprogramma in Rust. Het leest `terraform.tfstate`-bestanden van formaatversie 4 en telt factureerbare HCP Terraform Resources Under Management (RUM) volgens de definitie van HashiCorp. Het legt elke instantie uit, splitst het totaal uit per module en per type, schat maandkosten uit een prijsbestand dat je zelf meegeeft, en vergelijkt twee states. Het heeft geen account nodig en maakt geen netwerkverbinding. Het resultaat is een schatting.
 
 De uitvoer van de tool is Engels; de voorbeelden hieronder tonen die precies zoals de binary hem schrijft.
-
-## Waarom
-
-HCP Terraform rekent per RUM af. Een team ziet die telling op de billingpagina, achteraf, zonder uitleg per resource. rum-meter laat vooraf, op de eigen machine, zien hoeveel RUM een state heeft, in welke module en welk type dat zit, en wat een wijziging toevoegt of weghaalt. Dit is een plausibel scenario, geen bevestigde klacht: er is geen verifieerbaar bericht gevonden van een team dat een HCP Terraform RUM-rekening betwist. Betaalbereidheid is niet onderzocht. De zinnen van HashiCorp waar dit op steunt zijn nagelezen op 7 oktober 2026 en staan onder [Vergelijking met alternatieven](#vergelijking-met-alternatieven).
 
 ## Installatie
 
@@ -32,36 +26,6 @@ Kant-en-klare binaries voor Linux (x86_64, glibc en musl), Windows (x86_64) en m
 Voor de nieuwste `main`: `cargo install --locked --git https://github.com/qwpp7g79y4-maker/rum-meter`.
 
 Vanuit een lokale clone van deze 1.0.0-bron: `cargo install --path .` (of `cargo install --locked --path .`), of `cargo build --release`; de binary is `target/release/rum-meter`.
-
-## Systeemvereisten
-
-| Platform | Release-archief | Vereiste |
-|---|---|---|
-| Linux x86_64 | `x86_64-unknown-linux-gnu` | glibc 2.34 of nieuwer (bijvoorbeeld Ubuntu 22.04, Debian 12, RHEL 9) |
-| Linux x86_64 | `x86_64-unknown-linux-musl` | geen; statisch gelinkt, ook voor Alpine en oudere distributies |
-| macOS Apple Silicon | `aarch64-apple-darwin` | macOS 11 of nieuwer |
-| macOS Intel | `x86_64-apple-darwin` | macOS 10.12 of nieuwer |
-| Windows x86_64 | `x86_64-pc-windows-msvc` | Windows 10 of nieuwer |
-
-De binaries worden gebouwd en met een rooktest gecontroleerd op runners van GitHub (Ubuntu, macOS op Apple Silicon en Intel, Windows). Bouwen vanuit de broncode vraagt Rust 1.85 of nieuwer op elk platform dat Rust ondersteunt.
-
-## Aan de slag in 5 minuten
-
-Installeer rum-meter zoals bij Installatie en zet het op je `PATH`. Draai de
-onderstaande commando's vanuit de hoofdmap van de repository. Ze lezen de
-fictieve state-bestanden in `examples/`: geen netwerk, geen HCP
-Terraform-account, geen bestand van deze machine. De test
-`tests/readme_quickstart.rs` draait deze regels letterlijk.
-
-```sh
-rum-meter count examples/one-managed.tfstate
-rum-meter count --explain examples/web-stack.tfstate
-rum-meter diff examples/web-stack.tfstate examples/web-stack-next.tfstate
-```
-
-Elk commando eindigt met exitcode 0. De uitvoer staat in
-`examples/one-managed.count.txt`, `examples/web-stack.count.txt` en
-`examples/web-stack.diff.txt`.
 
 ## Snel aan de slag
 
@@ -275,6 +239,40 @@ Exitcode 0 is gelukt. Exitcode 1 is een drempel: `--max-rum` bij `count`, `--max
 Een rapport dat niet naar stdout geschreven kan worden is exit 2, met `rum-meter: cannot write report to stdout`, en een gesloten stdout is dezelfde fout. `--version` en `--help` die niet geschreven kunnen worden zijn exit 2, niet 0, met `rum-meter: cannot write message to stdout`. Een mislukte schrijfactie geeft geen panic, ook niet als stderr niet geschreven kan worden.
 
 Alle opties, exitcodes en foutmeldingen staan in de [referentie](docs/reference.nl.md) en in `rum-meter --help`.
+
+## Aan de slag in 5 minuten
+
+Installeer rum-meter zoals bij Installatie en zet het op je `PATH`. Draai de
+onderstaande commando's vanuit de hoofdmap van de repository. Ze lezen de
+fictieve state-bestanden in `examples/`: geen netwerk, geen HCP
+Terraform-account, geen bestand van deze machine. De test
+`tests/readme_quickstart.rs` draait deze regels letterlijk.
+
+```sh
+rum-meter count examples/one-managed.tfstate
+rum-meter count --explain examples/web-stack.tfstate
+rum-meter diff examples/web-stack.tfstate examples/web-stack-next.tfstate
+```
+
+Elk commando eindigt met exitcode 0. De uitvoer staat in
+`examples/one-managed.count.txt`, `examples/web-stack.count.txt` en
+`examples/web-stack.diff.txt`.
+
+## Systeemvereisten
+
+| Platform | Release-archief | Vereiste |
+|---|---|---|
+| Linux x86_64 | `x86_64-unknown-linux-gnu` | glibc 2.34 of nieuwer (bijvoorbeeld Ubuntu 22.04, Debian 12, RHEL 9) |
+| Linux x86_64 | `x86_64-unknown-linux-musl` | geen; statisch gelinkt, ook voor Alpine en oudere distributies |
+| macOS Apple Silicon | `aarch64-apple-darwin` | macOS 11 of nieuwer |
+| macOS Intel | `x86_64-apple-darwin` | macOS 10.12 of nieuwer |
+| Windows x86_64 | `x86_64-pc-windows-msvc` | Windows 10 of nieuwer |
+
+De binaries worden gebouwd en met een rooktest gecontroleerd op runners van GitHub (Ubuntu, macOS op Apple Silicon en Intel, Windows). Bouwen vanuit de broncode vraagt Rust 1.85 of nieuwer op elk platform dat Rust ondersteunt.
+
+## Waarom
+
+HCP Terraform rekent per RUM af. Een team ziet die telling op de billingpagina, achteraf, zonder uitleg per resource. rum-meter laat vooraf, op de eigen machine, zien hoeveel RUM een state heeft, in welke module en welk type dat zit, en wat een wijziging toevoegt of weghaalt. Dit is een plausibel scenario, geen bevestigde klacht: er is geen verifieerbaar bericht gevonden van een team dat een HCP Terraform RUM-rekening betwist. Betaalbereidheid is niet onderzocht. De zinnen van HashiCorp waar dit op steunt zijn nagelezen op 7 oktober 2026 en staan onder [Vergelijking met alternatieven](#vergelijking-met-alternatieven).
 
 ## Voorbeeld
 
