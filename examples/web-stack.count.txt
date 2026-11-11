@@ -1,0 +1,20 @@
+file: examples/web-stack.tfstate
+rum: 4
+not counted: R2 1, R3 2, R4 0
+  aws_vpc.main counts R1
+  module.web.aws_instance.app[0] counts R1
+  module.web.aws_instance.app[1] counts R1
+  module.web.aws_security_group.app counts R1
+  module.web.data.aws_ami.base does not count R2
+  null_resource.marker does not count R3
+  terraform_data.version does not count R3
+total rum: 4
+not counted: R2 1, R3 2, R4 0
+modules:
+  module.web: 3
+  (root): 1
+types:
+  aws_instance: 2
+  aws_security_group: 1
+  aws_vpc: 1
+estimate: HCP Terraform bills the hourly peak; this is a single snapshot

@@ -2,6 +2,47 @@
 
 This page shows how each release of rum-meter was checked before it was published, what we found, and what we fixed. It describes checks we did. It is not a guarantee that the software is free of bugs or secure.
 
+## Pre-release 1.0.0 (branch prep/w24-fout)
+
+| | |
+|---|---|
+| Version | 1.0.0 (not published from this branch) |
+| Commit measured | `79bc956` (branch prep/w24-fout) |
+| Tests | 315 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debug mode) |
+| Lints | `cargo fmt --check` and `cargo clippy --all-targets -- -D warnings` clean |
+
+## Test count (pre-release 1.0.0)
+
+| | |
+|---|---|
+| Commit measured | `662813e` (branch prep/w24-fout) |
+| Tests | 315 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debug mode) |
+
+## Line coverage (pre-release 1.0.0)
+
+| | |
+|---|---|
+| Date | 2026-11-08 |
+| Commit measured | `decfa7b` (branch prep/w24-fout) |
+| Command | `cargo llvm-cov --no-fail-fast -- --skip symlink_becomes_fifo_between_name_and_open` |
+| Line coverage | 96.78% (2920 lines, 94 missed), as printed by the command |
+| Goal of 90% or more | Met. No tests were added for coverage. |
+
+One test is skipped in the coverage run only: `symlink_becomes_fifo_between_name_and_open_exits_2` in `tests/regular_file.rs`. It traces the child with ptrace and allows 2 seconds. In a plain `cargo test` it takes about 1.7 seconds and passes. The binary built by llvm-cov is instrumented and writes a `.profraw` file when it exits, which takes it over the 2 second limit, so it fails in 2 of 3 runs there. The test runs in the normal `cargo test`. The skipped test covers a race in the open of a path. Its lines are in `src/regular.rs`, which is at 93.48% without it.
+
+## Measured time on a 100 MiB input (pre-release 1.0.0)
+
+| | |
+|---|---|
+| Date | 2026-11-08 |
+| Commit measured | `decfa7b` (branch prep/w24-fout) |
+| Build | `cargo build --release` |
+| Input | One synthetic Terraform state, 104857600 bytes (exactly 100 MiB), format version 4 as in `examples/`: 492,809 managed `aws_instance` resources, one instance each. The resource entries are almost identical: only the name and the instance id change. The file is generated in `/tmp` and is not committed. |
+| Command | `/usr/bin/time -f "%e s" target/release/rum-meter count big.tfstate` (exit 0, 492809 RUM) |
+| Measured | 0.85 s, 0.86 s, 0.86 s (three runs, elapsed wall-clock seconds) |
+
+This is one machine and one input shape. Real states differ, so it is not a promise for other inputs. No throughput figure is given.
+
 ## v0.1.2
 
 | | |
@@ -9,7 +50,7 @@ This page shows how each release of rum-meter was checked before it was publishe
 | Version | 0.1.2 ([release](https://github.com/qwpp7g79y4-maker/rum-meter/releases/tag/v0.1.2), [crates.io](https://crates.io/crates/rum-meter/0.1.2)) |
 | Commit checked | [`adc53d2`](https://github.com/qwpp7g79y4-maker/rum-meter/commit/adc53d2) |
 | Date | 2026-10-25 |
-| Tests | 223 automated tests, run in debug and release mode |
+| Tests | 232 automated tests, run in debug and release mode |
 
 ### How we checked
 

@@ -1,0 +1,11 @@
+old: examples/web-stack.tfstate
+new: examples/web-stack-next.tfstate
+rum: 4 -> 5
+rum delta: +1
+added:
+  module.db.aws_db_instance.main["primary"]
+  module.db.aws_db_instance.main["replica"]
+removed:
+  module.web.aws_instance.app[1]
+changed rule:
+estimate: HCP Terraform bills the hourly peak; this is a single snapshot

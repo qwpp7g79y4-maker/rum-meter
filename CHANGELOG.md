@@ -2,6 +2,39 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+## [1.0.0] - 2026-11-09
+
+The previous version is 0.1.3.
+
+### Added
+
+- `--compare FILE` compares this run with a saved JSON report and prints the difference. A module path, type name, tier name or address keeps its text when its rank changes. It is not given a new number. Exit 1 stays the threshold. A missing file and a file over 128 MiB stay exit 2. Tests in `tests/compare_reports.rs`.
+- SIGINT stops the process with exit 130 and does not panic. An `--output` file is not left half-written: the previous file stays, or the new file is complete. Exit codes 0, 1, 2 and 3 are unchanged. A threshold stays 1. A missing output directory stays 2. A file over 128 MiB stays 2. Test in `tests/interrupt.rs`.
+- `--output PATH` writes the report to a file instead of stdout. An existing file is replaced. A missing parent directory is exit 2 and is not created. Exit codes stay 0, 1, 2 and 3. Tests in `tests/output_path.rs`.
+- `--quiet` and `--verbose`. A pipe prints no hint and no context line. `--verbose` adds that context on stderr. The report and the exit codes are unchanged. `--quiet` together with `--verbose` is exit 3. Tests in `tests/verbosity.rs`.
+- `rum-meter completions bash|zsh` writes a shell completion script to stdout. The subcommand is hidden from `--help`. Uses `clap_complete` (rust-version 1.85, same as this package). Tests in `tests/completions.rs`.
+- `--markdown` and `--html` print a Markdown or a self-contained HTML report for `count` and `diff`, next to text and `--json`. The three format flags exclude each other (exit 3). Snapshot tests in `tests/report_formats.rs`.
+- `examples/web-stack.tfstate` and `examples/web-stack-next.tfstate`, two fictional states, with the expected output of `count --explain` and `diff` next to them. `tests/examples_golden.rs` compares the binary's output with those files.
+- `README.md` and `README.nl.md` have an Example and an Options section (Voorbeeld and Opties in Dutch). `tests/readme.rs` checks that every option in `rum-meter --help` is in both.
+- Manual page `man/rum-meter.1`, a fictional state in `examples/one-managed.tfstate`, and `tests/handbook_help.rs`. The test checks the long options in `rum-meter --help` against the manual page and runs the example command.
+
+### Changed
+
+- README and README.nl name the existing 128 MiB input cap. A state file, a price file or stdin over that cap is exit 2, `file is larger than 128 MiB`, and nothing is parsed. The cap is not raised. Tests in `tests/input_cap.rs`.
+- README, README.nl, `QUALITY.md` and `QUALITY.nl.md` state the measured test count (315).
+- README and README.nl have a section "Aan de slag in 5 minuten". `tests/readme_quickstart.rs` runs its commands literally.
+- Every input error message now ends with a hint after a semicolon that says what you can do, for example `; pass each state file once`. The text before the semicolon, and every exit code, are unchanged.
+- CI runs one workflow per ref at a time, has a job timeout, skips draft pull requests and caches the Cargo build.
+- The copyright line in the licenses and READMEs reads `2025-2026 PEPAI / Pepijn de Jonge`.
+- README and README.nl state the test count (315), the same number as the pre-release section of `QUALITY.md` and `QUALITY.nl.md`.
+- README, README.nl, `QUALITY.md` and `QUALITY.nl.md` state the measured test count (315) for commit `662813e`.
+
+### Fixed
+
+- The README said that passing the same state file to `count` twice was the `duplicate address` error. It is exit 2, `state file is given more than once`, before any file is opened, and the totals are not printed. The same address in two different files is still `duplicate address`.
+
 ## [0.1.3] - 2026-10-25
 
 ### Fixed

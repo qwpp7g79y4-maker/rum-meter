@@ -6,7 +6,7 @@ Tel factureerbare HCP Terraform-resources in een lokaal statebestand, vóór de 
 
 [![crates.io](https://img.shields.io/crates/v/rum-meter.svg)](https://crates.io/crates/rum-meter) [![downloads](https://img.shields.io/crates/d/rum-meter.svg)](https://crates.io/crates/rum-meter) [![CI](https://github.com/qwpp7g79y4-maker/rum-meter/actions/workflows/ci.yml/badge.svg)](https://github.com/qwpp7g79y4-maker/rum-meter/actions/workflows/ci.yml) [![PEPAI gecontroleerd](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fqwpp7g79y4-maker%2Frum-meter%2Fmain%2F.github%2Fbadge.json)](QUALITY.nl.md) [![MSRV 1.85](https://img.shields.io/badge/MSRV-1.85-blue.svg)](https://github.com/qwpp7g79y4-maker/rum-meter/blob/main/Cargo.toml) [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#licentie)
 
-[Installatie](#installatie) • [Snel aan de slag](#snel-aan-de-slag) • [Hoe het rekent](#hoe-het-rekent) • [Alternatieven](#vergelijking-met-alternatieven) • [Beperkingen](#beperkingen) • [Referentie](docs/reference.nl.md)
+[Installatie](#installatie) • [Snel aan de slag](#snel-aan-de-slag) • [Voorbeeld](#voorbeeld) • [Opties](#opties) • [Hoe het rekent](#hoe-het-rekent) • [Alternatieven](#vergelijking-met-alternatieven) • [Beperkingen](#beperkingen) • [Referentie](docs/reference.nl.md)
 
 rum-meter is een opdrachtregelprogramma in Rust. Het leest `terraform.tfstate`-bestanden van formaatversie 4 en telt factureerbare HCP Terraform Resources Under Management (RUM) volgens de definitie van HashiCorp. Het legt elke instantie uit, splitst het totaal uit per module en per type, schat maandkosten uit een prijsbestand dat je zelf meegeeft, en vergelijkt twee states. Het heeft geen account nodig en maakt geen netwerkverbinding. Het resultaat is een schatting.
 
@@ -18,18 +18,20 @@ HCP Terraform rekent per RUM af. Een team ziet die telling op de billingpagina, 
 
 ## Installatie
 
-Met Rust 1.85 of nieuwer installeer je vanaf [crates.io](https://crates.io/crates/rum-meter):
+Versie 1.0.0 staat op [crates.io](https://crates.io/crates/rum-meter). Met Rust 1.85 of nieuwer:
 
 ```sh
-cargo install --locked rum-meter
+cargo install rum-meter
 rum-meter --help
 ```
+
+`cargo install --locked rum-meter` gebruikt het lockbestand van de crate.
 
 Kant-en-klare binaries voor Linux (x86_64, glibc en musl), Windows (x86_64) en macOS (Intel en Apple Silicon), elk met een SHA-256-checksum, staan op de [Releases-pagina](https://github.com/qwpp7g79y4-maker/rum-meter/releases). Pak het archief uit en zet `rum-meter` in je `PATH`.
 
 Voor de nieuwste `main`: `cargo install --locked --git https://github.com/qwpp7g79y4-maker/rum-meter`.
 
-Vanuit een lokale clone: `cargo install --locked --path .`, of `cargo build --release`; de binary is `target/release/rum-meter`.
+Vanuit een lokale clone van deze 1.0.0-bron: `cargo install --path .` (of `cargo install --locked --path .`), of `cargo build --release`; de binary is `target/release/rum-meter`.
 
 ## Systeemvereisten
 
@@ -42,6 +44,24 @@ Vanuit een lokale clone: `cargo install --locked --path .`, of `cargo build --re
 | Windows x86_64 | `x86_64-pc-windows-msvc` | Windows 10 of nieuwer |
 
 De binaries worden gebouwd en met een rooktest gecontroleerd op runners van GitHub (Ubuntu, macOS op Apple Silicon en Intel, Windows). Bouwen vanuit de broncode vraagt Rust 1.85 of nieuwer op elk platform dat Rust ondersteunt.
+
+## Aan de slag in 5 minuten
+
+Installeer rum-meter zoals bij Installatie en zet het op je `PATH`. Draai de
+onderstaande commando's vanuit de hoofdmap van de repository. Ze lezen de
+fictieve state-bestanden in `examples/`: geen netwerk, geen HCP
+Terraform-account, geen bestand van deze machine. De test
+`tests/readme_quickstart.rs` draait deze regels letterlijk.
+
+```sh
+rum-meter count examples/one-managed.tfstate
+rum-meter count --explain examples/web-stack.tfstate
+rum-meter diff examples/web-stack.tfstate examples/web-stack-next.tfstate
+```
+
+Elk commando eindigt met exitcode 0. De uitvoer staat in
+`examples/one-managed.count.txt`, `examples/web-stack.count.txt` en
+`examples/web-stack.diff.txt`.
 
 ## Snel aan de slag
 
@@ -242,17 +262,74 @@ changed rule:
 estimate: HCP Terraform bills the hourly peak; this is a single snapshot
 ```
 
-Exitcode 0 is gelukt. Exitcode 1 is een drempel: `--max-rum` bij `count`, `--max-increase` bij `diff`. Het rapport wordt toch afgedrukt. Exitcode 2 is een invoerfout (onleesbaar bestand, geen gewoon bestand, ongeldige JSON, een state die geen JSON-object is, stateversie niet 4, een dubbel adres, UTF-16 of UTF-32, een ongeldig prijsbestand, of kosten die overlopen). Exitcode 3 is een gebruiksfout. Een vlag die het rapport niet zou veranderen is ook exit 3, met een vaste melding op stderr en niets op stdout, vóór het lezen van de states. Staan er meer tegelijk, dan wint de eerste van deze:
+Exitcode 0 is gelukt. Exitcode 1 is een drempel: `--max-rum` bij `count`, `--max-increase` bij `diff`. Het rapport wordt toch afgedrukt. Exitcode 2 is een invoerfout (onleesbaar bestand, geen gewoon bestand, ongeldige JSON, een state die geen JSON-object is, stateversie niet 4, een dubbel adres, hetzelfde statebestand meer dan eens, UTF-16 of UTF-32, een ongeldig prijsbestand, kosten die overlopen, een bestand groter dan 128 MiB, of een `--compare`-bestand dat niet gelezen kan worden of geen rum-meter JSON-rapport is). Exitcode 3 is een gebruiksfout. Een vlag die het rapport niet zou veranderen is ook exit 3, met een vaste melding op stderr en niets op stdout, vóór het lezen van de states. Staan er meer tegelijk, dan wint de eerste van deze:
 
 - `--max-increase only works with diff`
 - `--max-rum only works with count`
 - `--hours-per-month only works together with --prices`
 - `--top with diff only works together with --json`
 - `--explain with diff only works together with --json`
+- `--compare does not combine with --json, --markdown or --html`
+- `--explain does not combine with --compare`
 
 Een rapport dat niet naar stdout geschreven kan worden is exit 2, met `rum-meter: cannot write report to stdout`, en een gesloten stdout is dezelfde fout. `--version` en `--help` die niet geschreven kunnen worden zijn exit 2, niet 0, met `rum-meter: cannot write message to stdout`. Een mislukte schrijfactie geeft geen panic, ook niet als stderr niet geschreven kan worden.
 
 Alle opties, exitcodes en foutmeldingen staan in de [referentie](docs/reference.nl.md) en in `rum-meter --help`.
+
+## Voorbeeld
+
+De map `examples/` bevat fictieve states met de verwachte uitvoer. `tests/examples_golden.rs` controleert dat rum-meter precies die uitvoer drukt.
+
+```sh
+rum-meter count --explain examples/web-stack.tfstate
+```
+
+```text
+file: examples/web-stack.tfstate
+rum: 4
+not counted: R2 1, R3 2, R4 0
+  aws_vpc.main counts R1
+  module.web.aws_instance.app[0] counts R1
+  module.web.aws_instance.app[1] counts R1
+  module.web.aws_security_group.app counts R1
+  module.web.data.aws_ami.base does not count R2
+  null_resource.marker does not count R3
+  terraform_data.version does not count R3
+total rum: 4
+not counted: R2 1, R3 2, R4 0
+modules:
+  module.web: 3
+  (root): 1
+types:
+  aws_instance: 2
+  aws_security_group: 1
+  aws_vpc: 1
+estimate: HCP Terraform bills the hourly peak; this is a single snapshot
+```
+
+De diff van die state met `examples/web-stack-next.tfstate` staat in `examples/web-stack.diff.txt`. Zie [examples/README.md](examples/README.md).
+
+## Opties
+
+Dit zijn alle opties uit `rum-meter --help`. De commando's zijn `count` en `diff`; beide nemen de opties hieronder.
+
+- `--json`: druk JSON in plaats van tekst.
+- `--markdown`: druk een Markdown-rapport in plaats van tekst.
+- `--html`: druk een zelfstandig HTML-rapport in plaats van tekst.
+- `--explain`: druk één regel per instance.
+- `--top <N>`: toon hooguit N modules en N resourcetypes.
+- `--prices <FILE>`: lees tierprijzen uit dit JSON-bestand.
+- `--hours-per-month <N>`: uren per maand voor de kostenraming. Alleen samen met `--prices`.
+- `--max-rum <N>`: RUM-limiet voor `count`. Erboven is de exitcode 1.
+- `--max-increase <N>`: limiet voor de RUM-stijging bij `diff`. Erboven is de exitcode 1.
+- `--quiet`: verberg de hintregel. Geen contextregel. Het rapport blijft hetzelfde.
+- `--verbose`: druk de hintregel, en bij succes één contextregel op stderr. Het rapport blijft hetzelfde.
+- `--output <PATH>`: schrijf het rapport naar dit bestand in plaats van stdout. Een bestaand bestand wordt vervangen. Een ontbrekende bovenliggende map is exit 2 en wordt niet aangemaakt. SIGINT is exit 130 en laat dit bestand niet half geschreven achter.
+- `--compare <FILE>`: vergelijk deze run met een opgeslagen JSON-rapport en toon het verschil. Een modulepad, een typenaam, een tiernaam of een adres houdt zijn tekst als de rang verandert. Het krijgt geen nieuw nummer. Niet te combineren met `--json`, `--markdown`, `--html` of `--explain`. Een ontbrekend bestand is exit 2. De drempel blijft exit 1.
+- `-h`, `--help`: druk de hulptekst.
+- `-V`, `--version`: druk de versie.
+
+Elke invoerfout zegt wat er misging en eindigt met wat je eraan kunt doen. De details, met exitcodes, staan in de [referentie](docs/reference.nl.md).
 
 ## Hoe het rekent
 
@@ -263,7 +340,7 @@ Elk getal is terug te voeren op deze regels. Het adresformaat, het prijsbestand 
 - **R3 telt niet:** type `null_resource` of `terraform_data` ("Null Resources" zijn uitgezonderd). Aanname: `terraform_data` valt onder "Null Resources".
 - **R4:** een resourceblok zonder instanties telt 0.
 - **Deposed:** een deposed object is een eigen infrastructuurobject. Het adres eindigt op ` (deposed KEY)`, bijvoorbeeld `local_file.a (deposed 00000001)`. Een tellend deposed object blijft op R1. Een deposed `null_resource` of `terraform_data` blijft op R3. Er is geen aparte regelcode voor.
-- **Meerdere bestanden** worden opgeteld. Alleen tellende instanties (R1) komen in de module- en typelijsten. Hetzelfde modulepad of type uit meerdere states wordt opgeteld. Hetzelfde adres in meer dan één van die bestanden wordt niet opgeteld: dat is exit 2, `duplicate address`, met het adres. Hetzelfde bestand twee keer meegeven is die fout.
+- **Meerdere bestanden** worden opgeteld. Alleen tellende instanties (R1) komen in de module- en typelijsten. Hetzelfde modulepad of type uit meerdere states wordt opgeteld. Hetzelfde adres in meer dan één van die bestanden wordt niet opgeteld: dat is exit 2, `duplicate address`, met het adres. Hetzelfde bestand twee keer meegeven is exit 2, `state file is given more than once`, vóór er een bestand wordt geopend, en er wordt niets opgeteld.
 - **Aandeel van een lijst:** rijen staan op aantal aflopend, dan op naam oplopend. `--top N` houdt de eerste N rijen. De rest is één laatste rij `other`. Zonder `--top`, of als er niets overblijft, is er geen `other`-rij. Een ontbrekende of lege module is `(root)`.
 - **Kosten:** per maand = RUM x prijs per RUM-uur x uren. Standaard 730 uur. De prijs is het exacte decimale getal uit het bestand. 1 RUM tegen 0.004999999999999999999 voor 1 uur is 0.00. 1 RUM tegen 1.005 voor 1 uur is 1.01. Bedragen worden half away from zero afgerond op 2 decimalen, en het decimaalteken in de uitvoer is een punt. `diff` trekt die afgeronde centbedragen van elkaar af. Een product dat overloopt is exit 2, nooit een afgekapt bedrag.
 - **Schatting:** de tekst eindigt altijd op `estimate: HCP Terraform bills the hourly peak; this is a single snapshot`. JSON gebruikt dezelfde zin zonder het voorvoegsel `estimate:`.
@@ -295,12 +372,15 @@ De billingpagina toont de telling achteraf. rum-meter leest een bestand dat je a
 - "Each partial hour is billed as a full hour". Afronden per uur is niet gemodelleerd.
 - "HCP Terraform combines workspace and Stacks resources under management when calculating costs". Stacks-state wordt niet ondersteund.
 - Het gratis plan met maximaal 500 managed resources is een limiet, geen prijs.
-- Een state hoort elk adres één keer te hebben. Komt een adres twee keer voor, op root, in een module, met count of for_each, of als deposed object, dan telt rum-meter die state niet: exit 2, met het adres en de reden, zonder attribuutwaarden. Dezelfde regel geldt als `count` meerdere bestanden krijgt: het bestand dat een adres herhaalt is exit 2, en de totalen worden niet afgedrukt. Bij `diff` blijven added en removed daardoor optellen tot de RUM-delta.
+- Een state hoort elk adres één keer te hebben. Komt een adres twee keer voor, op root, in een module, met count of for_each, of als deposed object, dan telt rum-meter die state niet: exit 2, met het adres en de reden, zonder attribuutwaarden. Dezelfde regel geldt als `count` meerdere bestanden krijgt: het bestand dat een adres herhaalt is exit 2, en de totalen worden niet afgedrukt. Hetzelfde pad twee keer meegeven is exit 2, `state file is given more than once`, vóór er een bestand wordt geopend. Bij `diff` blijven added en removed daardoor optellen tot de RUM-delta.
 - rum-meter leest UTF-8, voor statebestanden en prijsbestanden. Een UTF-8 BOM aan het begin van het bestand wordt overgeslagen. Een UTF-16- of UTF-32-bestand, met of zonder BOM, zoals Windows PowerShell 5.1 bij een redirect schrijft, wordt niet omgezet. Dat is exit 2, met de melding dat het bestand UTF-16 (of UTF-32) is en als UTF-8 opgeslagen moet worden, bijvoorbeeld met `iconv -f UTF-16 -t UTF-8` of in PowerShell met `Out-File -Encoding utf8`. CRLF-regeleinden zijn geen probleem.
 - Een bestandsnaam die geen geldige UTF-8 is (kan op Linux) wordt wel gelezen, maar in het rapport getoond met U+FFFD voor de ongeldige bytes.
 - rum-meter leest alleen gewone bestanden, dus geen pipe of process substitution. Een map, een FIFO of een apparaat wordt geweigerd met exit 2 voordat er een byte wordt gelezen. Een symlink naar een FIFO wordt op dezelfde manier geweigerd. Het openen wacht niet, en het type komt van het geopende bestand, zodat een pad dat een FIFO wordt niet wordt gelezen en niet blijft hangen. Een symlink naar een gewoon bestand wordt wel gelezen. Het state-argument `-` is de uitzondering: stdin wordt tot het einde gelezen als het een pipe of een gewoon bestand is. Een terminal of een apparaat op stdin is `not a regular file`, en er wordt niets gelezen.
+- Een statebestand, een prijsbestand en stdin worden gelezen tot 128 MiB. Een bestand dat al groter is, is exit 2, `file is larger than 128 MiB`, en er wordt niets geparsed. De grens geldt voor de bytes die gelezen zouden worden, zodat een spaarzaam bestand op zijn grootte wordt geweigerd voordat er een byte wordt gelezen. Een pipe stopt bij dezelfde grens in plaats van eindeloos gelezen te worden.
 
 Waar de fixtures vandaan komen: [tests/fixtures/README.md](tests/fixtures/README.md).
+
+De suite heeft 315 automatische tests (`cargo test`). [QUALITY.nl.md](QUALITY.nl.md) noemt hetzelfde aantal.
 
 ## Privacy
 
@@ -317,7 +397,7 @@ Naar keuze onder een van deze licenties:
 - Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
 - MIT license ([LICENSE-MIT](LICENSE-MIT))
 
-Copyright 2026 PEPAI.
+Copyright 2025-2026 PEPAI / Pepijn de Jonge.
 
 ## Contact
 

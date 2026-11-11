@@ -38,7 +38,9 @@ fn assert_invalid_json(output: &Output, path: &str) {
         .expect("prefix")
         .strip_suffix('\n')
         .expect("single trailing newline");
-    let (line, column) = rest.split_once(" column ").expect("column");
+    let (position, hint) = rest.split_once("; ").expect("a hint after the position");
+    assert!(!hint.is_empty(), "the hint should say what to do");
+    let (line, column) = position.split_once(" column ").expect("column");
     assert!(
         !line.is_empty() && line.bytes().all(|byte| byte.is_ascii_digit()),
         "line should be a number"
@@ -59,7 +61,9 @@ fn version_3_exits_2() {
     let stderr = String::from_utf8(output.stderr).expect("stderr is utf-8");
     assert_eq!(
         stderr,
-        format!("rum-meter: {path}: state version is not 4\n")
+        format!(
+            "rum-meter: {path}: state version is not 4; only state format version 4 is supported, so write the state again with terraform state pull on a current Terraform or OpenTofu\n"
+        )
     );
 }
 
@@ -85,7 +89,9 @@ fn empty_file_exits_2() {
     let stderr = String::from_utf8(output.stderr).expect("stderr is utf-8");
     assert_eq!(
         stderr,
-        format!("rum-meter: {path}: invalid json at line 1 column 0\n")
+        format!(
+            "rum-meter: {path}: invalid json at line 1 column 0; fix the file there, or write it again with terraform state pull\n"
+        )
     );
 }
 
@@ -98,7 +104,9 @@ fn missing_file_exits_2() {
     let stderr = String::from_utf8(output.stderr).expect("stderr is utf-8");
     assert_eq!(
         stderr,
-        format!("rum-meter: {path}: unreadable (not found)\n")
+        format!(
+            "rum-meter: {path}: unreadable (not found); check that the path exists and that you may read it\n"
+        )
     );
 }
 
@@ -113,7 +121,10 @@ fn directory_exits_2() {
     assert_eq!(output.status.code(), Some(2), "directory should exit 2");
     assert_stdout_empty(&output);
     let stderr = String::from_utf8(output.stderr).expect("stderr is utf-8");
-    assert_eq!(stderr, format!("rum-meter: {path}: not a regular file\n"));
+    assert_eq!(
+        stderr,
+        format!("rum-meter: {path}: not a regular file; pass a regular file, or - to read stdin\n")
+    );
 }
 
 #[test]
@@ -138,7 +149,9 @@ fn diff_rejects_version_3() {
     let stderr = String::from_utf8(output.stderr).expect("stderr is utf-8");
     assert_eq!(
         stderr,
-        format!("rum-meter: {old}: state version is not 4\n")
+        format!(
+            "rum-meter: {old}: state version is not 4; only state format version 4 is supported, so write the state again with terraform state pull on a current Terraform or OpenTofu\n"
+        )
     );
 }
 

@@ -1,0 +1,10 @@
+file: examples/one-managed.tfstate
+rum: 1
+not counted: R2 0, R3 0, R4 0
+total rum: 1
+not counted: R2 0, R3 0, R4 0
+modules:
+  (root): 1
+types:
+  random_id: 1
+estimate: HCP Terraform bills the hourly peak; this is a single snapshot

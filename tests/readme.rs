@@ -173,6 +173,8 @@ fn readme_has_the_sections_and_names() {
         "## Installation",
         "## System requirements",
         "## Quick start",
+        "## Example",
+        "## Options",
         "## How it counts",
         "## Compared with alternatives",
         "## Limitations",
@@ -222,6 +224,33 @@ fn readme_has_the_sections_and_names() {
     }
 }
 
+/// CR1 and CR2 promises: exact money, a repeated path, a JSON array, and FIFOs.
+#[test]
+fn readme_names_exact_price_repeated_file_and_fifo() {
+    for rel in [README, README_NL] {
+        let text = read(rel);
+        for part in [
+            "`state file is given more than once`",
+            "`duplicate address`",
+            "`state is not an object`",
+            "0.004999999999999999999",
+            "1.005",
+            "1.01",
+            "cannot write message to stdout",
+            "cannot write report to stdout",
+            "`file is larger than 128 MiB`",
+        ] {
+            assert!(text.contains(part), "{rel} is missing {part}");
+        }
+    }
+    let en = read(README);
+    assert!(en.contains("A symlink to a FIFO is refused the same way"));
+    assert!(en.contains("does not hang"));
+    let nl = read(README_NL);
+    assert!(nl.contains("Een symlink naar een FIFO wordt op dezelfde manier geweigerd"));
+    assert!(nl.contains("niet blijft hangen"));
+}
+
 #[test]
 fn language_switch_on_top_of_every_page() {
     for (rel, line) in [
@@ -258,7 +287,7 @@ fn english_and_dutch_pages_match() {
         );
     }
     let nl = read(README_NL);
-    assert_eq!(headings(&nl).len(), 11, "README.nl.md section count");
+    assert_eq!(headings(&nl).len(), 14, "README.nl.md section count");
     assert_eq!(headings(&read(REF)).len(), 7, "reference section count");
     assert!(nl.contains("7 oktober 2026"), "Dutch README date");
     assert!(
@@ -267,10 +296,41 @@ fn english_and_dutch_pages_match() {
     );
 }
 
+/// Every option in `rum-meter --help` is named in both READMEs.
+#[test]
+fn every_help_option_is_in_both_readmes() {
+    let output = bin().arg("--help").output().expect("start binary");
+    let help = String::from_utf8(output.stdout).expect("help is utf-8");
+    let mut seen = 0;
+    for line in help.lines() {
+        let Some(start) = line.find("--") else {
+            continue;
+        };
+        let name = line[start..].split_whitespace().next().unwrap();
+        if !line.starts_with(' ') {
+            continue;
+        }
+        seen += 1;
+        for rel in [README, README_NL] {
+            let options = section(
+                &read(rel),
+                if rel == README {
+                    "## Options"
+                } else {
+                    "## Opties"
+                },
+            )
+            .to_string();
+            assert!(options.contains(&format!("`{name}")), "{rel} lacks {name}");
+        }
+    }
+    assert!(seen >= 8, "found only {seen} options in --help");
+}
+
 #[test]
 fn licenses_and_manifest_name_pepai() {
-    assert!(read("LICENSE-MIT").contains("Copyright (c) 2026 PEPAI"));
-    assert!(read("LICENSE-APACHE").contains("Copyright 2026 PEPAI"));
+    assert!(read("LICENSE-MIT").contains("Copyright (c) 2025-2026 PEPAI / Pepijn de Jonge"));
+    assert!(read("LICENSE-APACHE").contains("Copyright 2025-2026 PEPAI / Pepijn de Jonge"));
     let cargo = read("Cargo.toml");
     assert!(cargo.contains("PEPAI <pep_ai@icloud.com>"), "{cargo}");
     assert!(
@@ -435,6 +495,7 @@ fn option_and_error_tables_match_the_binary() {
         "diff tests/fixtures/version_3.json tests/fixtures/v4_handwritten.json",
         "count /dev/null",
         "count --prices /dev/null tests/fixtures/v4_one_managed.json",
+        "count tests/fixtures/v4_one_managed.json tests/fixtures/v4_one_managed.json",
     ] {
         required.insert(call);
     }
@@ -498,6 +559,7 @@ fn reference_describes_rules_and_price_errors() {
         "`monthly cost overflows`",
         "`file is UTF-16; save it as UTF-8`",
         "`duplicate address`",
+        "`state file is given more than once`",
         "`resource label is repeated across too many instances`",
         "`file is larger than 128 MiB`",
         "`not a regular file`",

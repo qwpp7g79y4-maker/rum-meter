@@ -36,13 +36,16 @@ const MAX_CURRENCY_CHARS: usize = 16;
 /// A price list read from disk. `price_per_rum_hour` is the exact decimal from the file.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PriceList {
+    /// Currency label from the file. Copied onto every tier line.
     pub currency: String,
+    /// Tiers in file order. Names are unique.
     pub tiers: Vec<TierPrice>,
 }
 
 /// One tier. The name and the price are taken from the file as given.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TierPrice {
+    /// Tier name from the file.
     pub name: String,
     /// Exact decimal from the JSON number. Not a binary float.
     pub price_per_rum_hour: BigDecimal,
@@ -51,8 +54,11 @@ pub struct TierPrice {
 /// One tier of the monthly estimate. `amount` is already rounded to two decimals.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TierCost {
+    /// Tier name from the price file.
     pub name: String,
+    /// Currency label from the price file.
     pub currency: String,
+    /// Monthly amount, rounded half away from zero to two decimal places.
     pub amount: String,
 }
 
@@ -121,64 +127,97 @@ fn format_cents(cents: u64) -> String {
     format!("{}.{:02}", cents / 100, cents % 100)
 }
 
+/// Why a price file was refused.
+///
+/// The display text is the path and the kind of problem, never bytes from the file.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PriceError {
+    /// The path could not be opened or read.
     Unreadable {
+        /// Path that was refused.
         path: PathBuf,
+        /// Short I/O kind, such as `not found` or `permission denied`.
         kind: &'static str,
     },
     /// The path exists and is not a regular file. Nothing was read.
     NotRegular {
+        /// Path that was refused.
         path: PathBuf,
     },
-    /// More than [`crate::regular::MAX_INPUT_BYTES`] were read. Nothing was parsed.
+    /// More than 128 MiB were read. Nothing was parsed.
     TooLarge {
+        /// Path that was refused.
         path: PathBuf,
     },
+    /// The file is not valid JSON.
     InvalidJson {
+        /// Path that was refused.
         path: PathBuf,
+        /// 1-based line reported by the JSON parser.
         line: usize,
+        /// 1-based column reported by the JSON parser.
         column: usize,
     },
+    /// The JSON root is not an object with the price-file fields.
     Invalid {
+        /// Path that was refused.
         path: PathBuf,
     },
+    /// The `tiers` array is empty.
     NoTiers {
+        /// Path that was refused.
         path: PathBuf,
     },
+    /// A tier `name` is empty.
     EmptyTierName {
+        /// Path that was refused.
         path: PathBuf,
     },
+    /// An element of `tiers` is not a JSON object.
     TierNotObject {
+        /// Path that was refused.
         path: PathBuf,
     },
+    /// A tier object repeats a key.
     DuplicateKey {
+        /// Path that was refused.
         path: PathBuf,
     },
     /// Two tiers share a `name`. Nothing from either tier is printed.
     DuplicateTierName {
+        /// Path that was refused.
         path: PathBuf,
     },
+    /// `price_per_rum_hour` is negative.
     NegativePrice {
+        /// Path that was refused.
         path: PathBuf,
     },
+    /// `price_per_rum_hour` is not a decimal number.
     NonNumericPrice {
+        /// Path that was refused.
         path: PathBuf,
     },
+    /// `currency` is empty.
     EmptyCurrency {
+        /// Path that was refused.
         path: PathBuf,
     },
     /// `currency` is longer than 16 characters. The text is not printed.
     CurrencyTooLong {
+        /// Path that was refused.
         path: PathBuf,
     },
     /// `currency` is not visible ASCII (U+0021 `!` through U+007E `~`).
     CurrencyNotAscii {
+        /// Path that was refused.
         path: PathBuf,
     },
     /// UTF-16 or UTF-32. Nothing was decoded.
     NotUtf8 {
+        /// Path that was refused.
         path: PathBuf,
+        /// `UTF-16` or `UTF-32`.
         encoding: &'static str,
     },
 }
@@ -230,21 +269,21 @@ impl fmt::Display for PriceError {
             Self::Unreadable { path, kind } => {
                 write!(
                     f,
-                    "rum-meter: {}: unreadable ({kind})",
+                    "rum-meter: {}: unreadable ({kind}); check that the path exists and that you may read it",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
             Self::NotRegular { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: not a regular file",
+                    "rum-meter: {}: not a regular file; pass a regular file, or - to read stdin",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
             Self::TooLarge { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: file is larger than {} MiB",
+                    "rum-meter: {}: file is larger than {} MiB; pass a smaller file",
                     crate::rum::escape_controls(&path.display().to_string()),
                     crate::regular::MAX_INPUT_BYTES / (1024 * 1024)
                 )
@@ -252,84 +291,84 @@ impl fmt::Display for PriceError {
             Self::InvalidJson { path, line, column } => {
                 write!(
                     f,
-                    "rum-meter: {}: invalid json at line {line} column {column}",
+                    "rum-meter: {}: invalid json at line {line} column {column}; fix the file there, or write it again with terraform state pull",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
             Self::Invalid { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: invalid price file",
+                    "rum-meter: {}: invalid price file; it must be a JSON object, see docs/reference.md",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
             Self::NoTiers { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: price file has no tiers",
+                    "rum-meter: {}: price file has no tiers; add at least one tier",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
             Self::EmptyTierName { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: tier name is empty",
+                    "rum-meter: {}: tier name is empty; give each tier a name",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
             Self::TierNotObject { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: tier is not an object",
+                    "rum-meter: {}: tier is not an object; write each tier as a JSON object",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
             Self::DuplicateKey { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: duplicate key in a tier",
+                    "rum-meter: {}: duplicate key in a tier; remove the repeated key",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
             Self::DuplicateTierName { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: duplicate tier name",
+                    "rum-meter: {}: duplicate tier name; give each tier its own name",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
             Self::NegativePrice { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: price is negative",
+                    "rum-meter: {}: price is negative; use a price of 0 or more",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
             Self::NonNumericPrice { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: price is not a number",
+                    "rum-meter: {}: price is not a number; write the price as a decimal number or string",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
             Self::EmptyCurrency { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: currency is empty",
+                    "rum-meter: {}: currency is empty; give a currency such as EUR",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
             Self::CurrencyTooLong { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: currency is too long",
+                    "rum-meter: {}: currency is too long; use a short code such as EUR",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
             Self::CurrencyNotAscii { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: currency is not visible ASCII",
+                    "rum-meter: {}: currency is not visible ASCII; use letters only, such as EUR",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
@@ -340,6 +379,31 @@ impl fmt::Display for PriceError {
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
+        }
+    }
+}
+
+impl PriceError {
+    /// Next step, shown only with extra context (`--verbose` or a terminal).
+    /// The text has no path and no bytes from the file.
+    pub fn hint(&self) -> &'static str {
+        match self {
+            Self::Unreadable { .. } => "check that the path exists and that you may read it",
+            Self::NotRegular { .. } => "pass a regular file, or - to read stdin",
+            Self::TooLarge { .. } => "pass a smaller file",
+            Self::InvalidJson { .. } => "fix the JSON at the reported line and column",
+            Self::Invalid { .. } => "see docs/reference.md for the price-file format",
+            Self::NoTiers { .. } => "add at least one tier",
+            Self::EmptyTierName { .. } => "give each tier a name",
+            Self::TierNotObject { .. } => "write each tier as a JSON object",
+            Self::DuplicateKey { .. } => "remove the repeated key",
+            Self::DuplicateTierName { .. } => "give each tier its own name",
+            Self::NegativePrice { .. } => "use a price of 0 or more",
+            Self::NonNumericPrice { .. } => "write the price as a decimal number or string",
+            Self::EmptyCurrency { .. } => "give a currency such as EUR",
+            Self::CurrencyTooLong { .. } => "use a short code such as EUR",
+            Self::CurrencyNotAscii { .. } => "use letters only, such as EUR",
+            Self::NotUtf8 { .. } => "save the file as UTF-8",
         }
     }
 }
@@ -750,7 +814,7 @@ mod tests {
         )
         .unwrap_err();
         assert!(matches!(err, PriceError::EmptyTierName { .. }));
-        assert!(err.to_string().ends_with("tier name is empty"));
+        assert!(err.to_string().contains("tier name is empty"));
         assert!(!err.to_string().contains("tier is not an object"));
     }
 
@@ -770,7 +834,7 @@ mod tests {
                 "{name}: {err}"
             );
             assert!(
-                err.to_string().ends_with("tier is not an object"),
+                err.to_string().contains("tier is not an object"),
                 "{name}: {err}"
             );
             assert!(!err.to_string().contains("tier name is empty"));
@@ -821,7 +885,7 @@ mod tests {
                 "{name}: {err}"
             );
             assert!(
-                err.to_string().ends_with("duplicate key in a tier"),
+                err.to_string().contains("duplicate key in a tier"),
                 "{name}: {err}"
             );
             assert!(
@@ -841,7 +905,7 @@ mod tests {
         )
         .unwrap_err();
         assert!(matches!(err, PriceError::DuplicateTierName { .. }));
-        assert!(err.to_string().ends_with("duplicate tier name"));
+        assert!(err.to_string().contains("duplicate tier name"));
     }
 
     #[test]
@@ -917,7 +981,7 @@ mod tests {
         let err = load_body("currency-17.json", &body).unwrap_err();
         assert!(matches!(err, PriceError::CurrencyTooLong { .. }));
         let text = err.to_string();
-        assert!(text.ends_with("currency is too long"));
+        assert!(text.contains("currency is too long"));
         assert!(!text.contains(&"A".repeat(MAX_CURRENCY_CHARS + 1)));
     }
 

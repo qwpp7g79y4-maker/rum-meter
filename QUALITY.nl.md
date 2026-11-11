@@ -2,6 +2,47 @@
 
 Deze pagina laat zien hoe elke release van rum-meter is gecontroleerd voordat hij online kwam, wat we vonden en wat we hebben opgelost. Het beschrijft onze controles. Het is geen garantie dat de software foutloos of veilig is.
 
+## Pre-release 1.0.0 (tak prep/w24-fout)
+
+| | |
+|---|---|
+| Versie | 1.0.0 (niet gepubliceerd vanaf deze tak) |
+| Gemeten commit | `79bc956` (tak prep/w24-fout) |
+| Tests | 315 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debugmodus) |
+| Lints | `cargo fmt --check` en `cargo clippy --all-targets -- -D warnings` schoon |
+
+## Testaantal (pre-release 1.0.0)
+
+| | |
+|---|---|
+| Gemeten commit | `662813e` (tak prep/w24-fout) |
+| Tests | 315 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debugmodus) |
+
+## Regeldekking (pre-release 1.0.0)
+
+| | |
+|---|---|
+| Datum | 2026-11-08 |
+| Gemeten commit | `decfa7b` (tak prep/w24-fout) |
+| Commando | `cargo llvm-cov --no-fail-fast -- --skip symlink_becomes_fifo_between_name_and_open` |
+| Regeldekking | 96.78% (2920 regels, 94 gemist), zoals het commando het afdrukt |
+| Doel van 90% of meer | Gehaald. Er zijn geen tests voor de dekking toegevoegd. |
+
+Eén test wordt alleen in de dekkingsrun overgeslagen: `symlink_becomes_fifo_between_name_and_open_exits_2` in `tests/regular_file.rs`. Hij traceert het kindproces met ptrace en staat 2 seconden toe. In een gewone `cargo test` duurt hij ongeveer 1.7 seconden en slaagt hij. Het binary dat llvm-cov bouwt is geïnstrumenteerd en schrijft bij het afsluiten een `.profraw`-bestand, waardoor hij over de limiet van 2 seconden gaat en daar in 2 van 3 runs faalt. De test draait in de normale `cargo test`. De overgeslagen test dekt een race bij het openen van een pad. Zijn regels staan in `src/regular.rs`, dat zonder hem op 93.48% staat.
+
+## Gemeten tijd op een invoer van 100 MiB (pre-release 1.0.0)
+
+| | |
+|---|---|
+| Datum | 2026-11-08 |
+| Gemeten commit | `decfa7b` (tak prep/w24-fout) |
+| Bouw | `cargo build --release` |
+| Invoer | Eén synthetische Terraform-state, 104857600 bytes (precies 100 MiB), formaat versie 4 zoals in `examples/`: 492,809 managed `aws_instance`-resources, elk één instantie. De resource-entries zijn bijna identiek: alleen de naam en het instance-id veranderen. Het bestand wordt in `/tmp` gegenereerd en niet gecommit. |
+| Commando | `/usr/bin/time -f "%e s" target/release/rum-meter count big.tfstate` (exit 0, 492809 RUM) |
+| Gemeten | 0.85 s, 0.86 s, 0.86 s (drie runs, verstreken wall-clock-seconden) |
+
+Dit is één machine en één invoervorm. Echte states verschillen, dus het is geen belofte voor andere invoer. Er wordt geen doorvoergetal gegeven.
+
 ## v0.1.2
 
 | | |
@@ -9,7 +50,7 @@ Deze pagina laat zien hoe elke release van rum-meter is gecontroleerd voordat hi
 | Versie | 0.1.2 ([release](https://github.com/qwpp7g79y4-maker/rum-meter/releases/tag/v0.1.2), [crates.io](https://crates.io/crates/rum-meter/0.1.2)) |
 | Gecontroleerde commit | [`adc53d2`](https://github.com/qwpp7g79y4-maker/rum-meter/commit/adc53d2) |
 | Datum | 2026-10-25 |
-| Tests | 223 automatische tests, gedraaid in debug- en releasemodus |
+| Tests | 232 automatische tests, gedraaid in debug- en releasemodus |
 
 ### Hoe we controleerden
 

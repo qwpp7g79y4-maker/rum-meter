@@ -6,7 +6,7 @@ Count billable HCP Terraform resources in a local state file, before the invoice
 
 [![crates.io](https://img.shields.io/crates/v/rum-meter.svg)](https://crates.io/crates/rum-meter) [![downloads](https://img.shields.io/crates/d/rum-meter.svg)](https://crates.io/crates/rum-meter) [![CI](https://github.com/qwpp7g79y4-maker/rum-meter/actions/workflows/ci.yml/badge.svg)](https://github.com/qwpp7g79y4-maker/rum-meter/actions/workflows/ci.yml) [![PEPAI checked](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fqwpp7g79y4-maker%2Frum-meter%2Fmain%2F.github%2Fbadge.json)](QUALITY.md) [![MSRV 1.85](https://img.shields.io/badge/MSRV-1.85-blue.svg)](https://github.com/qwpp7g79y4-maker/rum-meter/blob/main/Cargo.toml) [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 
-[Installation](#installation) • [Quick start](#quick-start) • [How it counts](#how-it-counts) • [Alternatives](#compared-with-alternatives) • [Limitations](#limitations) • [Reference](docs/reference.md)
+[Installation](#installation) • [Quick start](#quick-start) • [Example](#example) • [Options](#options) • [How it counts](#how-it-counts) • [Alternatives](#compared-with-alternatives) • [Limitations](#limitations) • [Reference](docs/reference.md)
 
 rum-meter is a command-line tool written in Rust. It reads `terraform.tfstate` files of format version 4 and counts billable HCP Terraform Resources Under Management (RUM) from HashiCorp's definition. It explains each instance, breaks the total down by module and by type, estimates a monthly cost from a price file you supply, and diffs two states. It needs no account and makes no network connection. The result is an estimate.
 
@@ -16,18 +16,20 @@ HCP Terraform bills per RUM. A team sees that count on the billing page afterwar
 
 ## Installation
 
-With Rust 1.85 or newer, install from [crates.io](https://crates.io/crates/rum-meter):
+Version 1.0.0 is on [crates.io](https://crates.io/crates/rum-meter). With Rust 1.85 or newer:
 
 ```sh
-cargo install --locked rum-meter
+cargo install rum-meter
 rum-meter --help
 ```
+
+`cargo install --locked rum-meter` pins the crate's lockfile.
 
 Ready-made binaries for Linux (x86_64, glibc and musl), Windows (x86_64) and macOS (Intel and Apple Silicon), each with a SHA-256 checksum, are on the [Releases page](https://github.com/qwpp7g79y4-maker/rum-meter/releases). Unpack the archive and put `rum-meter` on your `PATH`.
 
 For the latest `main`: `cargo install --locked --git https://github.com/qwpp7g79y4-maker/rum-meter`.
 
-From a local clone: `cargo install --locked --path .`, or `cargo build --release`; the binary is `target/release/rum-meter`.
+From a local clone of this 1.0.0 source: `cargo install --path .` (or `cargo install --locked --path .`), or `cargo build --release`; the binary is `target/release/rum-meter`.
 
 ## System requirements
 
@@ -40,6 +42,22 @@ From a local clone: `cargo install --locked --path .`, or `cargo build --release
 | Windows x86_64 | `x86_64-pc-windows-msvc` | Windows 10 or newer |
 
 The binaries are built and smoke-tested on GitHub runners (Ubuntu, macOS on Apple Silicon and Intel, Windows). Building from source needs Rust 1.85 or newer on any platform Rust supports.
+
+## Aan de slag in 5 minuten
+
+Install rum-meter as in Installation and put it on your `PATH`. Run the
+commands below from the repository root. They read the fictional state files in
+`examples/`: no network, no HCP Terraform account, no file from this machine.
+The test `tests/readme_quickstart.rs` runs these lines literally.
+
+```sh
+rum-meter count examples/one-managed.tfstate
+rum-meter count --explain examples/web-stack.tfstate
+rum-meter diff examples/web-stack.tfstate examples/web-stack-next.tfstate
+```
+
+Each command exits 0. Their output is stored in `examples/one-managed.count.txt`,
+`examples/web-stack.count.txt` and `examples/web-stack.diff.txt`.
 
 ## Quick start
 
@@ -240,17 +258,76 @@ changed rule:
 estimate: HCP Terraform bills the hourly peak; this is a single snapshot
 ```
 
-Exit code 0 is success. Exit code 1 is a threshold: `--max-rum` on `count`, `--max-increase` on `diff`. The report is still printed. Exit code 2 is an input error (unreadable file, not a regular file, invalid JSON, a state that is not a JSON object, state version not 4, a duplicate address, UTF-16 or UTF-32, an invalid price file, or a cost that overflows). Exit code 3 is a usage error. A flag that would not change the report is also exit 3, with a fixed message on stderr and nothing on stdout, before the states are read. If several apply, the first of these wins:
+Exit code 0 is success. Exit code 1 is a threshold: `--max-rum` on `count`, `--max-increase` on `diff`. The report is still printed. Exit code 2 is an input error (unreadable file, not a regular file, invalid JSON, a state that is not a JSON object, state version not 4, a duplicate address, the same state file given more than once, UTF-16 or UTF-32, an invalid price file, a cost that overflows, a file larger than 128 MiB, or a `--compare` file that cannot be read or is not a rum-meter JSON report). Exit code 3 is a usage error. A flag that would not change the report is also exit 3, with a fixed message on stderr and nothing on stdout, before the states are read. If several apply, the first of these wins:
 
 - `--max-increase only works with diff`
 - `--max-rum only works with count`
 - `--hours-per-month only works together with --prices`
 - `--top with diff only works together with --json`
 - `--explain with diff only works together with --json`
+- `--compare does not combine with --json, --markdown or --html`
+- `--explain does not combine with --compare`
 
 A report that cannot be written to stdout is exit 2, with `rum-meter: cannot write report to stdout`, and a closed stdout is the same error. `--version` and `--help` that cannot be written are exit 2, not 0, with `rum-meter: cannot write message to stdout`. A failed write does not panic, even when stderr cannot be written.
 
 All options, exit codes and error messages are listed in the [reference](docs/reference.md) and in `rum-meter --help`.
+The manual page is [`man/rum-meter.1`](man/rum-meter.1).
+`rum-meter --help` lists the commands `count`, `diff` and `help`.
+
+## Example
+
+The `examples/` directory holds fictional states and their expected output. `tests/examples_golden.rs` checks that rum-meter prints exactly that output.
+
+```sh
+rum-meter count --explain examples/web-stack.tfstate
+```
+
+```text
+file: examples/web-stack.tfstate
+rum: 4
+not counted: R2 1, R3 2, R4 0
+  aws_vpc.main counts R1
+  module.web.aws_instance.app[0] counts R1
+  module.web.aws_instance.app[1] counts R1
+  module.web.aws_security_group.app counts R1
+  module.web.data.aws_ami.base does not count R2
+  null_resource.marker does not count R3
+  terraform_data.version does not count R3
+total rum: 4
+not counted: R2 1, R3 2, R4 0
+modules:
+  module.web: 3
+  (root): 1
+types:
+  aws_instance: 2
+  aws_security_group: 1
+  aws_vpc: 1
+estimate: HCP Terraform bills the hourly peak; this is a single snapshot
+```
+
+The diff of that state against `examples/web-stack-next.tfstate` is in `examples/web-stack.diff.txt`. See [examples/README.md](examples/README.md).
+
+## Options
+
+These are all the options of `rum-meter --help`. The commands are `count` and `diff`; both take the options below.
+
+- `--json`: print JSON instead of text.
+- `--markdown`: print a Markdown report instead of text.
+- `--html`: print a self-contained HTML report instead of text.
+- `--explain`: print one line per instance.
+- `--top <N>`: list at most N modules and N resource types.
+- `--prices <FILE>`: read tier prices from this JSON file.
+- `--hours-per-month <N>`: hours in a month for the cost estimate. Only together with `--prices`.
+- `--max-rum <N>`: RUM limit for `count`. Above it the exit code is 1.
+- `--max-increase <N>`: RUM increase limit for `diff`. Above it the exit code is 1.
+- `--quiet`: hide the hint line. No context line. The report stays the same.
+- `--verbose`: print the hint line, and on success one context line on stderr. The report stays the same.
+- `--output <PATH>`: write the report to this file instead of stdout. An existing file is replaced. A missing parent directory is exit 2 and is not created. SIGINT is exit 130 and does not leave this file half-written.
+- `--compare <FILE>`: compare this run with a saved JSON report and print the difference. A module path, type name, tier name or address keeps its text when its rank changes. It is not given a new number. Does not combine with `--json`, `--markdown`, `--html` or `--explain`. A missing file is exit 2. The threshold stays exit 1.
+- `-h`, `--help`: print help.
+- `-V`, `--version`: print the version.
+
+Every input error says what went wrong and ends with what you can do about it. The details, with exit codes, are in the [reference](docs/reference.md).
 
 ## How it counts
 
@@ -261,7 +338,7 @@ Every number can be traced back to these rules. The address format, the price fi
 - **R3 does not count:** type `null_resource` or `terraform_data` ("Null Resources" are excluded). Assumption: `terraform_data` falls under "Null Resources".
 - **R4:** a resource block with no instances counts 0.
 - **Deposed:** a deposed object is its own infrastructure object. The address ends with ` (deposed KEY)`, for example `local_file.a (deposed 00000001)`. A counting deposed object stays on R1. A deposed `null_resource` or `terraform_data` stays on R3. There is no separate rule code for it.
-- **Several files** are summed. Only counting instances (R1) enter the module and type lists. The same module path or type from several states is added up. The same address in more than one of those files is not summed: that is exit 2, `duplicate address`, with the address. Passing the same file twice is that error.
+- **Several files** are summed. Only counting instances (R1) enter the module and type lists. The same module path or type from several states is added up. The same address in more than one of those files is not summed: that is exit 2, `duplicate address`, with the address. Passing the same file twice is exit 2, `state file is given more than once`, before any file is opened, and nothing is summed.
 - **Share of a list:** rows are ordered by count descending, then by name ascending. `--top N` keeps the first N rows. The rest is one final row `other`. Without `--top`, or when nothing remains, there is no `other` row. An absent or empty module is `(root)`.
 - **Cost:** per month = RUM x price per RUM-hour x hours. The default is 730 hours. The price is the exact decimal from the file. 1 RUM at 0.004999999999999999999 for 1 hour is 0.00. 1 RUM at 1.005 for 1 hour is 1.01. Amounts are rounded half away from zero to 2 decimals, and the decimal separator in the output is a point. `diff` subtracts the rounded cent amounts. A product that overflows is exit 2, never a clamped amount.
 - **Estimate:** the text always ends with `estimate: HCP Terraform bills the hourly peak; this is a single snapshot`. JSON uses the same sentence without the `estimate:` prefix.
@@ -293,12 +370,15 @@ The billing page shows the count afterwards. rum-meter reads a file you already 
 - "Each partial hour is billed as a full hour". Rounding per hour is not modeled.
 - "HCP Terraform combines workspace and Stacks resources under management when calculating costs". Stacks state is not supported.
 - The free plan with at most 500 managed resources is a limit, not a price.
-- A state should contain each address once. If an address appears twice, at the root, in a module, with count or for_each, or as a deposed object, rum-meter does not count that state: exit 2, with the address and the reason, without attribute values. The same rule applies when `count` is given several files: the file that repeats an address is exit 2, and the totals are not printed. On `diff`, added and removed therefore still add up to the RUM delta.
+- A state should contain each address once. If an address appears twice, at the root, in a module, with count or for_each, or as a deposed object, rum-meter does not count that state: exit 2, with the address and the reason, without attribute values. The same rule applies when `count` is given several files: the file that repeats an address is exit 2, and the totals are not printed. Passing the same path twice is exit 2, `state file is given more than once`, before any file is opened. On `diff`, added and removed therefore still add up to the RUM delta.
 - rum-meter reads UTF-8, for state files and price files. A UTF-8 BOM at the start of the file is skipped. A UTF-16 or UTF-32 file, with or without a BOM, such as Windows PowerShell 5.1 writes on a redirect, is not converted. That is exit 2, with the message that the file is UTF-16 (or UTF-32) and must be saved as UTF-8, for example with `iconv -f UTF-16 -t UTF-8` or in PowerShell with `Out-File -Encoding utf8`. CRLF line ends are fine.
 - A file name that is not valid UTF-8 (possible on Linux) is read, but shown in the report with U+FFFD for the invalid bytes.
 - rum-meter reads only regular files, so not a pipe or process substitution. A directory, a FIFO or a device is refused with exit 2 before any byte is read. A symlink to a FIFO is refused the same way. The open does not wait, and the type is taken from the opened file, so a path that becomes a FIFO is not read and does not hang. A symlink to a regular file is read. The state argument `-` is the exception: stdin is read to the end when it is a pipe or a regular file. A terminal or a device on stdin is `not a regular file`, and nothing is read.
+- A state file, a price file and stdin are read up to 128 MiB. A file already over that size is exit 2, `file is larger than 128 MiB`, and nothing is parsed. The cap is the bytes that would be read, so a sparse file is refused from its size before any byte is read. A pipe stops at the same cap instead of being read without end.
 
 Where the fixtures come from: [tests/fixtures/README.md](tests/fixtures/README.md).
+
+The suite has 315 automated tests (`cargo test`). [QUALITY.md](QUALITY.md) records the same number.
 
 ## Privacy
 
@@ -315,7 +395,7 @@ Licensed under either of
 - Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
 - MIT license ([LICENSE-MIT](LICENSE-MIT))
 
-at your option. Copyright 2026 PEPAI.
+at your option. Copyright 2025-2026 PEPAI / Pepijn de Jonge.
 
 Release archives include THIRD-PARTY-LICENSES.html with the licenses of the third-party crates in the binary.
 

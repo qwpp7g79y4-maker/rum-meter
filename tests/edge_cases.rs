@@ -70,7 +70,9 @@ fn assert_duplicate(path: &str, address: &str, output: &Output) {
     assert!(output.stdout.is_empty(), "stdout:\n{stdout}");
     assert_eq!(
         stderr,
-        format!("rum-meter: {path}: duplicate address {address}\n")
+        format!(
+            "rum-meter: {path}: duplicate address {address}; each address may occur once, so remove the repeat or do not pass overlapping states\n"
+        )
     );
 }
 
@@ -250,7 +252,9 @@ fn assert_cost_overflow(path: &str, output: &Output) {
     assert!(output.stdout.is_empty(), "stdout:\n{stdout}");
     assert_eq!(
         stderr,
-        format!("rum-meter: {path}: monthly cost overflows\n")
+        format!(
+            "rum-meter: {path}: monthly cost overflows; check the prices and --hours-per-month\n"
+        )
     );
     assert!(!stderr.contains("184467440737095516"));
     assert!(!stderr.contains("1e308"));
@@ -469,7 +473,9 @@ fn version_3_and_5_exit_2() {
         let stderr = String::from_utf8(output.stderr).expect("utf-8");
         assert_eq!(
             stderr,
-            format!("rum-meter: {path}: state version is not 4\n")
+            format!(
+                "rum-meter: {path}: state version is not 4; only state format version 4 is supported, so write the state again with terraform state pull on a current Terraform or OpenTofu\n"
+            )
         );
     }
 }

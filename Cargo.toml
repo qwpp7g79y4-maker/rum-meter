@@ -1,6 +1,6 @@
 [package]
 name = "rum-meter"
-version = "0.1.3"
+version = "1.0.0"
 edition = "2024"
 rust-version = "1.85"
 authors = ["PEPAI <pep_ai@icloud.com>"]
@@ -14,11 +14,12 @@ exclude = [".github/", ".gitattributes", "fuzz/"]
 
 [lints.rust]
 # Set automatically by `cargo fuzz`; see the `parse_bytes_for_fuzzing` hooks.
-unexpected_cfgs = { level = "warn", check-cfg = ["cfg(fuzzing)"] }
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(fuzzing)", "cfg(coverage)"] }
 
 [dependencies]
 bigdecimal = "0.4"
 clap = { version = "4.5", features = ["derive"] }
+clap_complete = "4.6"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["raw_value"] }
 

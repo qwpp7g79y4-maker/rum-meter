@@ -29,19 +29,27 @@ use serde::Deserialize;
 /// `sensitive_attributes`, `private` and `outputs` are never stored.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct State {
+    /// `version` from the state file. Only 4 is accepted.
     pub version: u64,
+    /// Resource blocks. Absent in the file means none.
     #[serde(default)]
     pub resources: Vec<Resource>,
 }
 
+/// One resource block from the state file.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct Resource {
+    /// `managed`, `data`, or another mode string from the file.
     pub mode: String,
+    /// Resource type. The JSON field is `type`.
     #[serde(rename = "type")]
     pub resource_type: String,
+    /// Resource name.
     pub name: String,
+    /// Module path. Absent at the root.
     #[serde(default)]
     pub module: Option<String>,
+    /// Instances in this block. Empty means there are none.
     #[serde(default)]
     pub instances: Vec<Instance>,
 }
@@ -54,8 +62,11 @@ pub struct Resource {
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(from = "InstanceFile")]
 pub struct Instance {
+    /// Count index or for_each key. Absent when the resource has neither.
     pub index_key: Option<IndexKey>,
+    /// Key of a create_before_destroy object that is not current.
     pub deposed: Option<String>,
+    /// True only when `status` is the string `tainted`.
     pub tainted: bool,
 }
 
@@ -84,39 +95,59 @@ impl From<InstanceFile> for Instance {
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 #[serde(untagged)]
 pub enum IndexKey {
+    /// Count index, a JSON number.
     Number(u64),
+    /// for_each key, a JSON string.
     String(String),
 }
 
+/// Why a state file was refused.
+///
+/// The display text is the path, the error kind, and for JSON the line and
+/// column. It never includes bytes from the file.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LoadError {
+    /// The path could not be opened or read.
     Unreadable {
+        /// Path that was refused.
         path: PathBuf,
+        /// Short I/O kind, such as `not found` or `permission denied`.
         kind: &'static str,
     },
     /// The path exists and is not a regular file. Nothing was read.
     NotRegular {
+        /// Path that was refused.
         path: PathBuf,
     },
-    /// More than [`crate::regular::MAX_INPUT_BYTES`] were read. Nothing was parsed.
+    /// More than 128 MiB were read. Nothing was parsed.
     TooLarge {
+        /// Path that was refused. `-` means stdin.
         path: PathBuf,
     },
+    /// The file is not valid JSON.
     InvalidJson {
+        /// Path that was refused.
         path: PathBuf,
+        /// 1-based line reported by the JSON parser.
         line: usize,
+        /// 1-based column reported by the JSON parser.
         column: usize,
     },
+    /// `version` is not 4.
     UnsupportedVersion {
+        /// Path that was refused.
         path: PathBuf,
     },
     /// Valid JSON whose root is an array, not an object.
     NotObject {
+        /// Path that was refused.
         path: PathBuf,
     },
     /// UTF-16 or UTF-32. Nothing was decoded.
     NotUtf8 {
+        /// Path that was refused.
         path: PathBuf,
+        /// `UTF-16` or `UTF-32`.
         encoding: &'static str,
     },
 }
@@ -158,21 +189,21 @@ impl fmt::Display for LoadError {
             Self::Unreadable { path, kind } => {
                 write!(
                     f,
-                    "rum-meter: {}: unreadable ({kind})",
+                    "rum-meter: {}: unreadable ({kind}); check that the path exists and that you may read it",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
             Self::NotRegular { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: not a regular file",
+                    "rum-meter: {}: not a regular file; pass a regular file, or - to read stdin",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
             Self::TooLarge { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: file is larger than {} MiB",
+                    "rum-meter: {}: file is larger than {} MiB; pass a smaller file",
                     crate::rum::escape_controls(&path.display().to_string()),
                     crate::regular::MAX_INPUT_BYTES / (1024 * 1024)
                 )
@@ -180,21 +211,21 @@ impl fmt::Display for LoadError {
             Self::InvalidJson { path, line, column } => {
                 write!(
                     f,
-                    "rum-meter: {}: invalid json at line {line} column {column}",
+                    "rum-meter: {}: invalid json at line {line} column {column}; fix the file there, or write it again with terraform state pull",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
             Self::UnsupportedVersion { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: state version is not 4",
+                    "rum-meter: {}: state version is not 4; only state format version 4 is supported, so write the state again with terraform state pull on a current Terraform or OpenTofu",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
             Self::NotObject { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: state is not an object",
+                    "rum-meter: {}: state is not an object; a state file is one JSON object",
                     crate::rum::escape_controls(&path.display().to_string())
                 )
             }
@@ -209,15 +240,30 @@ impl fmt::Display for LoadError {
     }
 }
 
+impl LoadError {
+    /// Next step, shown only with extra context (`--verbose` or a terminal).
+    /// The text has no path and no bytes from the file.
+    pub fn hint(&self) -> &'static str {
+        match self {
+            Self::Unreadable { .. } => "check that the path exists and that you may read it",
+            Self::NotRegular { .. } => "pass a regular file, or - to read stdin",
+            Self::TooLarge { .. } => "pass a smaller file",
+            Self::InvalidJson { .. } => "fix the JSON at the reported line and column",
+            Self::UnsupportedVersion { .. } => "write the state again with terraform state pull",
+            Self::NotObject { .. } => "pass one JSON object, not an array",
+            Self::NotUtf8 { .. } => "save the file as UTF-8",
+        }
+    }
+}
+
 impl std::error::Error for LoadError {}
 
 /// Read one state file. The error text is only the path, the error kind, and
 /// for JSON the line and column. It never includes bytes from the file.
 ///
 /// A path that is not a regular file is refused without reading a byte.
-/// The path `-` reads stdin instead: a pipe or a regular file, up to
-/// [`crate::regular::MAX_INPUT_BYTES`]. A terminal or a device on stdin is
-/// refused without reading a byte.
+/// The path `-` reads stdin instead: a pipe or a regular file, up to 128 MiB.
+/// A terminal or a device on stdin is refused without reading a byte.
 pub fn load_state(path: &Path) -> Result<State, LoadError> {
     let bytes = if path == Path::new("-") {
         crate::regular::read_stdin().map_err(|err| read_error(path, err))?

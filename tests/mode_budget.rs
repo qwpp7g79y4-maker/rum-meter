@@ -44,7 +44,9 @@ fn assert_refused(output: &Output, path: &str, elapsed: Duration) {
     let stderr = String::from_utf8(output.stderr.clone()).expect("stderr is utf-8");
     assert_eq!(
         stderr,
-        format!("rum-meter: {path}: resource label is repeated across too many instances\n")
+        format!(
+            "rum-meter: {path}: resource label is repeated across too many instances; split the state into smaller files\n"
+        )
     );
     assert!(!stderr.contains("CANARY-SECRET-MODE"));
     assert!(!stderr.contains(&"a".repeat(64)));

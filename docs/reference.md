@@ -8,19 +8,25 @@ This page has the complete details. For an overview, see the [README](../README.
 
 Run `rum-meter --help`, `rum-meter count --help` or `rum-meter diff --help` for the built-in help. `count` takes one or more state files (`STATE`). `diff` takes the earlier file (`OLD`) and then the later file (`NEW`).
 
-A flag that would not change the report is exit 3, with one fixed line on stderr and nothing on stdout, before any file is read. If several apply, the first match wins: `--max-increase` on count, `--max-rum` on diff, `--hours-per-month` without `--prices`, then on diff without `--json` first `--top` and then `--explain`. `--json` does not change a refusal. With `--json`, `--top` and `--explain` on diff do apply, and the command exits 0. See [Exit codes and usage errors](#exit-codes-and-usage-errors).
+A flag that would not change the report is exit 3, with one fixed line on stderr and nothing on stdout, before any file is read. If several apply, the first match wins: `--max-increase` on count, `--max-rum` on diff, `--hours-per-month` without `--prices`, then on diff without `--json` first `--top` and then `--explain`. After those five, `--compare` together with `--json`, `--markdown` or `--html`, then `--explain` together with `--compare`. `--json` does not change a refusal. With `--json`, `--top` and `--explain` on diff do apply, and the command exits 0, except together with `--compare`, which is exit 3. See [Exit codes and usage errors](#exit-codes-and-usage-errors).
 
 | Option | Applies to | What it does |
 | --- | --- | --- |
 | `--json` | count and diff | Print one JSON object instead of text. `schema_version` is 1. |
+| `--markdown` | count and diff | Print a Markdown report instead of text. Cannot be combined with `--json` or `--html` (exit 3). On diff, `--explain` and `--top` still need `--json`. |
+| `--html` | count and diff | Print a self-contained HTML page (no scripts, no external resources) instead of text. Cannot be combined with `--json` or `--markdown` (exit 3). On diff, `--explain` and `--top` still need `--json`. |
 | `--explain` | count; on diff only together with `--json` | One line per instance: the address, `counts` or `does not count`, and the rule code. A tainted object appends ` tainted`. |
 | `--top` | count; on diff only together with `--json` | Keep at most N module rows and N type rows. The rest is one row `other`, or `(other)` when that name is already taken. |
 | `--prices` | count and diff | Read tier prices from this JSON file. Without it there is no cost line. |
 | `--hours-per-month` | count and diff, only together with `--prices` | Hours in the month used for the estimate. Default 730. |
 | `--max-rum` | count | Exit 1 when the summed RUM is above N. N itself is within the limit. The report is still printed. |
 | `--max-increase` | diff | Exit 1 when new RUM minus old RUM is above N. An equal delta is within the limit. A decrease is within every limit. The report is still printed. |
+| `--quiet` | count and diff | Hide the hint line, also on a terminal. No context line. Stdout is unchanged. |
+| `--verbose` | count and diff | Print the hint line even when stderr is a pipe, and on success one `context:` line on stderr. Stdout is unchanged. Together with `--quiet` this is exit 3. |
+| `--output` | count and diff | Write the report to this file instead of stdout. An existing file is replaced. A missing parent directory is exit 2 and is not created. Stdout stays empty. Exit codes stay 0, 1, 2 and 3. |
+| `--compare` | count and diff | Compare this run with a saved JSON report and print the difference. A module path, type name, tier name or address is matched by that text. A change of rank does not give it a new number and does not list it as removed and added. Does not combine with `--json`, `--markdown`, `--html` or `--explain` (exit 3). A missing file, a directory, or a file over 128 MiB is exit 2. This is not a new threshold. Exit 1 stays `--max-rum` and `--max-increase`. |
 | `--help` | everywhere | Show help and exit 0. `-h` is the short form. |
-| `--version` | top level | Show `rum-meter 0.1.3` and exit 0. `-V` is the short form. |
+| `--version` | top level | Show `rum-meter 1.0.0` and exit 0. `-V` is the short form. |
 
 ## Price file
 
@@ -86,7 +92,7 @@ A state file, a price file and stdin are read in chunks up to a fixed cap of 128
 
 Before classification, the length of `module`, `mode`, `type` and `name` on each resource is multiplied by its instance count (a block with no instances counts as one) and those products are summed. Above 32 MiB that sum is exit 2: `resource label is repeated across too many instances`. The label text is not printed. Thousands of short names stay under the limit and are counted. The check runs for every file passed to `count`, and for both files passed to `diff`, after the file is read and before any per-instance copy.
 
-Each address may occur once, in one file and across the files passed to `count`. A repeat, at the root, in a module, with count or for_each, as a deposed object, or in a later file, is exit 2: `duplicate address`, plus the address. Control characters, and invisible or bidirectional format characters such as U+200B and U+202E, in that address are written as `\uXXXX`. Attribute values are not included. The first repeat in verdict order is the one reported. On `diff`, added and removed therefore still add up to the RUM delta. Text output escapes control characters the same way. JSON keeps the characters and lets the JSON encoder escape them.
+Each address may occur once, in one file and across the files passed to `count`. A repeat, at the root, in a module, with count or for_each, as a deposed object, or in a later file, is exit 2: `duplicate address`, plus the address. Passing the same path to `count` twice is exit 2, `state file is given more than once`, before any of those files is opened. The totals are not printed. Control characters, and invisible or bidirectional format characters such as U+200B and U+202E, in that address are written as `\uXXXX`. Attribute values are not included. The first repeat in verdict order is the one reported. On `diff`, added and removed therefore still add up to the RUM delta. Text output escapes control characters the same way. JSON keeps the characters and lets the JSON encoder escape them.
 
 ## How it counts
 
@@ -132,16 +138,21 @@ An instance object has `file`, `address`, `counts` and `rule`. `deposed` is the 
 
 Text reports and error messages escape control characters, and invisible or bidirectional format characters such as U+200B and U+202E, in addresses, file paths and price labels as `\uXXXX`. JSON preserves the original strings.
 
+`--compare FILE` reads a report this tool wrote with `--json` and prints the difference between that report and this run, as text. Rows are matched by name. A module path, a type name, a tier name or an address that is in both reports keeps that text. A change of rank does not give it a new number. `--compare` does not combine with `--json`, `--markdown`, `--html` or `--explain` (exit 3). A missing file, a path that is not a regular file, a file over 128 MiB, or a file that is not such a report is exit 2. The threshold stays exit 1.
+
 ## Exit codes and usage errors
+
+Every exit-2 message below names what went wrong and, after a semicolon, what you can do about it.
 
 | Code | Meaning |
 | --- | --- |
 | 0 | Success. An equal threshold is included. |
 | 1 | Threshold: summed RUM above `--max-rum` on count, or the RUM increase above `--max-increase` on diff. The report is still printed. |
-| 2 | Input error: unreadable file, not a regular file, invalid JSON, a state that is not a JSON object, state version not 4, UTF-16 or UTF-32, a duplicate address, an invalid price file, or a cost that overflows. Stdout is empty. |
+| 2 | Input error: unreadable file, not a regular file, invalid JSON, a state that is not a JSON object, state version not 4, UTF-16 or UTF-32, a duplicate address, the same state file given more than once, an invalid price file, a cost that overflows, or a `--compare` file that cannot be read or is not a rum-meter JSON report. Stdout is empty. |
 | 3 | Usage error, including a flag that would not change the report. Stdout is empty. |
+| 130 | Interrupted by SIGINT. Not a success. An `--output` file is not left half-written. |
 
-A report that cannot be written or flushed to stdout also exits 2, with `rum-meter: cannot write report to stdout`. Some report bytes may already have been written when the failure occurs. A closed stdout is the same error. `--version` and `--help` that cannot be written or flushed also exit 2, not 0, with `rum-meter: cannot write message to stdout`. A failed write does not panic. When stderr cannot be written either, the exit code is unchanged and there is no panic.
+A report that cannot be written or flushed to stdout also exits 2, with `rum-meter: cannot write report to stdout`. Some report bytes may already have been written when the failure occurs. A closed stdout is the same error. `--version` and `--help` that cannot be written or flushed also exit 2, not 0, with `rum-meter: cannot write message to stdout`. A failed write does not panic. When stderr cannot be written either, the exit code is unchanged and there is no panic. `--output PATH` writes that same report to the file and leaves stdout empty. An existing file is replaced. A missing parent directory is exit 2, not exit 1, and the directory is not created. SIGINT stops the process with exit 130 and does not panic. Codes 0, 1, 2 and 3 are unchanged. A threshold stays exit 1. A missing parent directory stays exit 2. A state file, a price file or stdin over 128 MiB stays exit 2. An `--output` file is not left half-written: the previous bytes stay, or the new file is complete.
 
 Every row below is run against the binary. The message is the whole stderr, and `\n` is a newline.
 
@@ -162,20 +173,26 @@ Every row below is run against the binary. The message is the whole stderr, and 
 | arguments | diff | The new file is missing. | `diff only.json` | 3 | `error: the following required arguments were not provided:\n  <NEW>\n\nUsage: rum-meter diff <OLD> <NEW>\n\nFor more information, try '--help'.\n` |
 | arguments | top level | Unknown flag. | `--not-an-option` | 3 | `error: unexpected argument '--not-an-option' found\n\nUsage: rum-meter [OPTIONS] <COMMAND>\n\nFor more information, try '--help'.\n` |
 | `--top` | count | Not a number. | `count --top abc tests/fixtures/v4_one_managed.json` | 3 | `error: invalid value 'abc' for '--top <N>': invalid digit found in string\n\nFor more information, try '--help'.\n` |
-| state file | count | Missing path. | `count tests/fixtures/missing.json` | 2 | `rum-meter: tests/fixtures/missing.json: unreadable (not found)\n` |
-| state file | count | A directory is not a regular file. | `count tests/fixtures` | 2 | `rum-meter: tests/fixtures: not a regular file\n` |
-| state file | count | Empty file. | `count tests/fixtures/empty.json` | 2 | `rum-meter: tests/fixtures/empty.json: invalid json at line 1 column 0\n` |
-| state file | count | Truncated JSON. | `count tests/fixtures/broken.json` | 2 | `rum-meter: tests/fixtures/broken.json: invalid json at line 2 column 0\n` |
-| state file | count | Version 3. | `count tests/fixtures/version_3.json` | 2 | `rum-meter: tests/fixtures/version_3.json: state version is not 4\n` |
-| state file | count | Version is text, not a number. | `count tests/fixtures/version_string.json` | 2 | `rum-meter: tests/fixtures/version_string.json: invalid json at line 1 column 33\n` |
-| `--prices` | count | A state file has no currency. | `count --prices tests/fixtures/v4_one_managed.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/v4_one_managed.json: currency is empty\n` |
-| `--prices` | count | The price path is a directory. | `count --prices tests/fixtures tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures: not a regular file\n` |
-| `--prices` | count | The price file is missing. | `count --prices tests/fixtures/missing-prices.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/missing-prices.json: unreadable (not found)\n` |
-| `--prices` | count | The price file is empty. | `count --prices tests/fixtures/empty.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/empty.json: invalid json at line 1 column 0\n` |
-| `--prices` | count | Two tiers have the same name. | `count --prices tests/fixtures/dup-tier-prices.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/dup-tier-prices.json: duplicate tier name\n` |
-| state file | diff | The old state is version 3. | `diff tests/fixtures/version_3.json tests/fixtures/v4_handwritten.json` | 2 | `rum-meter: tests/fixtures/version_3.json: state version is not 4\n` |
-| state file | count | A device is not a regular file (Linux and macOS). | `count /dev/null` | 2 | `rum-meter: /dev/null: not a regular file\n` |
-| `--prices` | count | The price path is a device (Linux and macOS). | `count --prices /dev/null tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: /dev/null: not a regular file\n` |
+| state file | count | Missing path. | `count tests/fixtures/missing.json` | 2 | `rum-meter: tests/fixtures/missing.json: unreadable (not found); check that the path exists and that you may read it\n` |
+| state file | count | A directory is not a regular file. | `count tests/fixtures` | 2 | `rum-meter: tests/fixtures: not a regular file; pass a regular file, or - to read stdin\n` |
+| state file | count | Empty file. | `count tests/fixtures/empty.json` | 2 | `rum-meter: tests/fixtures/empty.json: invalid json at line 1 column 0; fix the file there, or write it again with terraform state pull\n` |
+| state file | count | Truncated JSON. | `count tests/fixtures/broken.json` | 2 | `rum-meter: tests/fixtures/broken.json: invalid json at line 2 column 0; fix the file there, or write it again with terraform state pull\n` |
+| state file | count | Version 3. | `count tests/fixtures/version_3.json` | 2 | `rum-meter: tests/fixtures/version_3.json: state version is not 4; only state format version 4 is supported, so write the state again with terraform state pull on a current Terraform or OpenTofu\n` |
+| state file | count | Version is text, not a number. | `count tests/fixtures/version_string.json` | 2 | `rum-meter: tests/fixtures/version_string.json: invalid json at line 1 column 33; fix the file there, or write it again with terraform state pull\n` |
+| `--prices` | count | A state file has no currency. | `count --prices tests/fixtures/v4_one_managed.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/v4_one_managed.json: currency is empty; give a currency such as EUR\n` |
+| `--prices` | count | The price path is a directory. | `count --prices tests/fixtures tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures: not a regular file; pass a regular file, or - to read stdin\n` |
+| `--prices` | count | The price file is missing. | `count --prices tests/fixtures/missing-prices.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/missing-prices.json: unreadable (not found); check that the path exists and that you may read it\n` |
+| `--prices` | count | The price file is empty. | `count --prices tests/fixtures/empty.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/empty.json: invalid json at line 1 column 0; fix the file there, or write it again with terraform state pull\n` |
+| `--prices` | count | Two tiers have the same name. | `count --prices tests/fixtures/dup-tier-prices.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/dup-tier-prices.json: duplicate tier name; give each tier its own name\n` |
+| state file | diff | The old state is version 3. | `diff tests/fixtures/version_3.json tests/fixtures/v4_handwritten.json` | 2 | `rum-meter: tests/fixtures/version_3.json: state version is not 4; only state format version 4 is supported, so write the state again with terraform state pull on a current Terraform or OpenTofu\n` |
+| state file | count | The same path twice. | `count tests/fixtures/v4_one_managed.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/v4_one_managed.json: state file is given more than once; pass each state file once\n` |
+| state file | count | A device is not a regular file (Linux and macOS). | `count /dev/null` | 2 | `rum-meter: /dev/null: not a regular file; pass a regular file, or - to read stdin\n` |
+| `--prices` | count | The price path is a device (Linux and macOS). | `count --prices /dev/null tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: /dev/null: not a regular file; pass a regular file, or - to read stdin\n` |
+| `--output` | count | The parent directory is missing. | `count --output tests/no-such-output-dir/report.txt tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: cannot write report to tests/no-such-output-dir/report.txt; check that the parent directory exists and is writable, the tool does not create it\n` |
+| `--compare` | count | The report file is missing. | `count --compare tests/fixtures/missing-compare.json tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures/missing-compare.json: unreadable (not found); check that the path exists and that you may read it\n` |
+| `--compare` | count | The report path is a directory. | `count --compare tests/fixtures tests/fixtures/v4_one_managed.json` | 2 | `rum-meter: tests/fixtures: not a regular file; pass a regular file\n` |
+| `--compare` | count | Combined with `--json`. | `count --json --compare tests/fixtures/compare-count.json tests/fixtures/v4_one_managed.json` | 3 | `--compare does not combine with --json, --markdown or --html\n` |
+| `--compare` | count | Combined with `--explain`. | `count --explain --compare tests/fixtures/compare-count.json tests/fixtures/v4_one_managed.json` | 3 | `--explain does not combine with --compare\n` |
 
 ## Privacy and safety
 

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>rum-meter count</title>
+<style>body{font-family:sans-serif;max-width:60rem;margin:2rem auto;padding:0 1rem}table{border-collapse:collapse;margin-bottom:1rem}th,td{border:1px solid #888;padding:.25rem .6rem;text-align:left}th{background:#eee}</style>
+</head>
+<body>
+<h1>rum-meter count</h1>
+<p>Total RUM: 2</p>
+<p>Not counted: R2 1, R3 2, R4 1</p>
+<h2>Files</h2>
+<table>
+<thead><tr><th>File</th><th>RUM</th><th>Not counted</th></tr></thead>
+<tbody>
+<tr><td>tests/fixtures/v4_handwritten.json</td><td>2</td><td>R2 1, R3 2, R4 1</td></tr>
+</tbody>
+</table>
+<h2>Modules</h2>
+<table>
+<thead><tr><th>Name</th><th>RUM</th></tr></thead>
+<tbody>
+<tr><td>module.child</td><td>2</td></tr>
+</tbody>
+</table>
+<h2>Types</h2>
+<table>
+<thead><tr><th>Name</th><th>RUM</th></tr></thead>
+<tbody>
+<tr><td>random_id</td><td>2</td></tr>
+</tbody>
+</table>
+<h2>Costs</h2>
+<table>
+<thead><tr><th>Tier</th><th>Currency</th><th>Amount</th></tr></thead>
+<tbody>
+<tr><td>example-a</td><td>EUR</td><td>1460.00</td></tr>
+<tr><td>example-b</td><td>EUR</td><td>730.00</td></tr>
+</tbody>
+</table>
+<h2>Instances</h2>
+<table>
+<thead><tr><th>File</th><th>Address</th><th>Verdict</th><th>Rule</th><th>Tainted</th></tr></thead>
+<tbody>
+<tr><td>tests/fixtures/v4_handwritten.json</td><td>null_resource.counted[0]</td><td>does not count</td><td>R3</td><td>no</td></tr>
+<tr><td>tests/fixtures/v4_handwritten.json</td><td>null_resource.counted[3]</td><td>does not count</td><td>R3</td><td>no</td></tr>
+<tr><td>tests/fixtures/v4_handwritten.json</td><td>module.child.random_id.labeled[&quot;web&quot;]</td><td>counts</td><td>R1</td><td>no</td></tr>
+<tr><td>tests/fixtures/v4_handwritten.json</td><td>module.child.random_id.labeled[&quot;db&quot;]</td><td>counts</td><td>R1</td><td>no</td></tr>
+<tr><td>tests/fixtures/v4_handwritten.json</td><td>module.child.module.nested.data.local_file.cfg</td><td>does not count</td><td>R2</td><td>no</td></tr>
+<tr><td>tests/fixtures/v4_handwritten.json</td><td>module.child.module.nested.terraform_data.unused</td><td>does not count</td><td>R4</td><td>no</td></tr>
+</tbody>
+</table>
+<p>Estimate: HCP Terraform bills the hourly peak; this is a single snapshot</p>
+</body>
+</html>

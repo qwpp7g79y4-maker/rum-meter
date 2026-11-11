@@ -125,6 +125,6 @@ fn two_copies_of_the_fixture_are_a_repeated_path() {
     assert!(output.stdout.is_empty(), "{stderr}");
     assert_eq!(
         stderr,
-        "rum-meter: tests/fixtures/v4_top.json: state file is given more than once\n"
+        "rum-meter: tests/fixtures/v4_top.json: state file is given more than once; pass each state file once\n"
     );
 }

@@ -39,6 +39,15 @@ fn sparse_file(name: &str) -> String {
     path.into_os_string().into_string().expect("utf-8 path")
 }
 
+/// Deletes the over-cap file even when an assertion fails.
+struct RemoveFile(PathBuf);
+
+impl Drop for RemoveFile {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.0);
+    }
+}
+
 fn assert_too_large(output: &Output, path: &str) {
     assert_eq!(
         output.status.code(),
@@ -53,7 +62,7 @@ fn assert_too_large(output: &Output, path: &str) {
     let stderr = String::from_utf8(output.stderr.clone()).expect("stderr is utf-8");
     assert_eq!(
         stderr,
-        format!("rum-meter: {path}: file is larger than 128 MiB\n")
+        format!("rum-meter: {path}: file is larger than 128 MiB; pass a smaller file\n")
     );
 }
 
@@ -85,4 +94,37 @@ fn sparse_stdin_over_the_cap_is_refused() {
         .output()
         .expect("rum-meter binary");
     assert_too_large(&output, "-");
+}
+
+/// 129 MiB, which is over the 128 MiB cap, outside the repository.
+///
+/// On Unix the file is created in `/tmp`. It is removed before the test
+/// returns and is not committed. `set_len` leaves it sparse, so the test
+/// writes no payload and the binary refuses the file from its size.
+#[test]
+fn file_outside_the_repo_over_the_cap_exits_2() {
+    let dir = if cfg!(unix) {
+        PathBuf::from("/tmp")
+    } else {
+        std::env::temp_dir()
+    };
+    let path = dir.join(format!(
+        "rum-meter-w46-over-cap-{}-{}.json",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos()
+    ));
+    let _remove = RemoveFile(path.clone());
+    let file = File::create(&path).expect("create over-cap file");
+    file.set_len(OVER_CAP).expect("set_len");
+    drop(file);
+    assert!(
+        !path.starts_with(env!("CARGO_MANIFEST_DIR")),
+        "the over-cap file must stay out of the repository"
+    );
+    let path_str = path.to_str().expect("utf-8 path");
+    let output = run(&["count", path_str]);
+    assert_too_large(&output, path_str);
 }

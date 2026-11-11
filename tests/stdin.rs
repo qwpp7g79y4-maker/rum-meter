@@ -84,7 +84,10 @@ fn dash_on_a_device_is_refused() {
     assert_eq!(output.status.code(), Some(2));
     assert!(output.stdout.is_empty());
     let stderr = String::from_utf8(output.stderr).expect("utf-8");
-    assert_eq!(stderr, "rum-meter: -: not a regular file\n");
+    assert_eq!(
+        stderr,
+        "rum-meter: -: not a regular file; pass a regular file, or - to read stdin\n"
+    );
 }
 
 #[test]
@@ -97,5 +100,8 @@ fn prices_dash_does_not_read_stdin() {
     assert_eq!(output.status.code(), Some(2));
     assert!(output.stdout.is_empty());
     let stderr = String::from_utf8(output.stderr).expect("utf-8");
-    assert_eq!(stderr, "rum-meter: -: unreadable (not found)\n");
+    assert_eq!(
+        stderr,
+        "rum-meter: -: unreadable (not found); check that the path exists and that you may read it\n"
+    );
 }

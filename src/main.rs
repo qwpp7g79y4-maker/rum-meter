@@ -1,17 +1,23 @@
+use std::cell::Cell;
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::fmt;
-use std::io::{self, Write};
+use std::io::{self, IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
+use clap_complete::Shell;
+
+mod interrupt;
 
 const MAX_INCREASE_ONLY_DIFF: &str = "--max-increase only works with diff";
 const MAX_RUM_ONLY_COUNT: &str = "--max-rum only works with count";
 const HOURS_NEEDS_PRICES: &str = "--hours-per-month only works together with --prices";
 const TOP_DIFF_NEEDS_JSON: &str = "--top with diff only works together with --json";
 const EXPLAIN_DIFF_NEEDS_JSON: &str = "--explain with diff only works together with --json";
+const COMPARE_NEEDS_TEXT: &str = "--compare does not combine with --json, --markdown or --html";
+const EXPLAIN_NEEDS_NO_COMPARE: &str = "--explain does not combine with --compare";
 
 /// Shown under `--help`, `count --help` and `diff --help`. Same sentences as the stderr refusals.
 const USAGE_HELP: &str = "\
@@ -19,14 +25,20 @@ const USAGE_HELP: &str = "\
 --max-rum only works with count
 --hours-per-month only works together with --prices
 --top with diff only works together with --json
---explain with diff only works together with --json";
+--explain with diff only works together with --json
+--compare does not combine with --json, --markdown or --html
+--explain does not combine with --compare";
+
+// Debug: crate version, plus the git sha when git itself printed one.
+// Release: crate version only. See `build.rs`.
+include!(concat!(env!("OUT_DIR"), "/display_version.rs"));
 
 #[derive(Parser)]
 // `bin_name` keeps usage lines at `rum-meter`, also as `rum-meter.exe` on Windows.
 #[command(
     name = "rum-meter",
     bin_name = "rum-meter",
-    version,
+    version = DISPLAY_VERSION,
     about = "Estimate billable HCP Terraform RUM from local state files",
     after_help = USAGE_HELP
 )]
@@ -34,6 +46,14 @@ struct Cli {
     /// Print JSON instead of text
     #[arg(long, global = true)]
     json: bool,
+
+    /// Print a Markdown report instead of text
+    #[arg(long, global = true, conflicts_with_all = ["json", "html"])]
+    markdown: bool,
+
+    /// Print a self-contained HTML report instead of text
+    #[arg(long, global = true, conflicts_with_all = ["json", "markdown"])]
+    html: bool,
 
     /// Print one line per instance
     #[arg(long, global = true)]
@@ -59,8 +79,53 @@ struct Cli {
     #[arg(long, global = true, value_name = "N")]
     max_increase: Option<u64>,
 
+    /// Hide the hint line. No context line.
+    #[arg(long, global = true, conflicts_with = "verbose")]
+    quiet: bool,
+
+    /// Print the hint line, and on success one context line on stderr.
+    #[arg(long, global = true, conflicts_with = "quiet")]
+    verbose: bool,
+
+    /// Write the report to this file instead of stdout
+    #[arg(long, global = true, value_name = "PATH")]
+    output: Option<PathBuf>,
+
+    /// Compare this run with a saved JSON report and print the difference
+    #[arg(long, global = true, value_name = "FILE")]
+    compare: Option<PathBuf>,
+
     #[command(subcommand)]
     command: Commands,
+}
+
+thread_local! {
+    /// Hint lines. A terminal shows them. A pipe does not, unless `--verbose`.
+    static EXTRA: Cell<bool> = const { Cell::new(false) };
+}
+
+fn set_extra(extra: bool) {
+    EXTRA.with(|cell| cell.set(extra));
+}
+
+fn extra() -> bool {
+    EXTRA.with(|cell| cell.get())
+}
+
+/// `--quiet` hides hints even on a terminal. `--verbose` shows them even on a pipe.
+/// Both flags together are a clap usage error and never reach a report.
+fn show_extra(quiet: bool, verbose: bool) -> bool {
+    show_extra_on(quiet, verbose, io::stderr().is_terminal())
+}
+
+fn show_extra_on(quiet: bool, verbose: bool, terminal: bool) -> bool {
+    if quiet {
+        false
+    } else if verbose {
+        true
+    } else {
+        terminal
+    }
 }
 
 #[derive(Subcommand)]
@@ -82,6 +147,13 @@ enum Commands {
         #[arg(value_name = "NEW")]
         new: PathBuf,
     },
+    /// Write a shell completion script to stdout
+    #[command(hide = true)]
+    Completions {
+        /// Shell to generate for: bash or zsh
+        #[arg(value_name = "SHELL", value_parser = ["bash", "zsh"])]
+        shell: String,
+    },
 }
 
 /// Clap rejects a bare `-`. Rewrite only that token, and not the value of an
@@ -89,24 +161,56 @@ enum Commands {
 const STDIN_SENTINEL: &str = "\u{0}";
 
 fn main() -> ExitCode {
+    interrupt::install();
     match Cli::try_parse_from(normalize_stdin_args()) {
         Ok(mut cli) => {
             restore_stdin_paths(&mut cli);
+            set_extra(show_extra(cli.quiet, cli.verbose));
+            if let Commands::Completions { shell } = &cli.command {
+                return write_completions(shell);
+            }
             if let Some(message) = refused_option(&cli) {
                 write_stderr_line(message);
                 return ExitCode::from(3);
             }
             match execute(&cli) {
-                Ok(RunOutcome::Success) => ExitCode::SUCCESS,
-                Ok(RunOutcome::ThresholdExceeded) => ExitCode::from(1),
+                Ok(RunOutcome::Success { context }) => {
+                    if cli.verbose {
+                        write_stderr_line(&format!("context: {context}"));
+                    }
+                    ExitCode::SUCCESS
+                }
+                Ok(RunOutcome::ThresholdExceeded { hint }) => {
+                    if extra() {
+                        write_stderr_line(&format!("hint: {hint}"));
+                    }
+                    ExitCode::from(1)
+                }
                 Err(err) => {
-                    write_stderr_line(&err.to_string());
+                    write_stderr_hint(&err.to_string(), err.hint());
                     ExitCode::from(2)
                 }
             }
         }
         Err(err) => clap_exit(err),
     }
+}
+
+/// Writes the completion script for `shell` to stdout. A failed write is exit 2.
+fn write_completions(shell: &str) -> ExitCode {
+    let shell = if shell == "bash" {
+        Shell::Bash
+    } else {
+        Shell::Zsh
+    };
+    let mut buffer = Vec::new();
+    clap_complete::generate(shell, &mut Cli::command(), "rum-meter", &mut buffer);
+    let mut out = io::stdout().lock();
+    if out.write_all(&buffer).and_then(|()| out.flush()).is_err() {
+        write_stderr_line("rum-meter: cannot write message to stdout");
+        return ExitCode::from(2);
+    }
+    ExitCode::SUCCESS
 }
 
 fn normalize_stdin_args() -> Vec<OsString> {
@@ -116,6 +220,8 @@ fn normalize_stdin_args() -> Vec<OsString> {
         "--hours-per-month",
         "--max-rum",
         "--max-increase",
+        "--output",
+        "--compare",
     ];
     let mut args: Vec<OsString> = std::env::args_os().collect();
     let mut index = 0;
@@ -149,6 +255,7 @@ fn restore_stdin_paths(cli: &mut Cli) {
             restore(old);
             restore(new);
         }
+        Commands::Completions { .. } => {}
     }
 }
 
@@ -187,14 +294,40 @@ fn write_stderr_line(message: &str) {
     let _ = stderr.flush();
 }
 
+/// Writes an error line, then a `hint:` line when extra context is on.
+///
+/// Extra context is on for a terminal and for `--verbose`. A pipe, a redirect,
+/// and `--quiet` keep the first line only, so captured stderr stays one line.
+fn write_stderr_hint(message: &str, hint: &str) {
+    if extra() {
+        write_stderr_line(&format!("{message}\nhint: {hint}"));
+    } else {
+        write_stderr_line(message);
+    }
+}
+
 enum CliError {
     State(rum_meter::state::LoadError),
     Prices(rum_meter::cost::PriceError),
-    DuplicateAddress { path: PathBuf, address: String },
-    LabelTooLarge { path: PathBuf },
-    RepeatedPath { path: PathBuf },
-    CostOverflow { path: PathBuf },
+    DuplicateAddress {
+        path: PathBuf,
+        address: String,
+    },
+    LabelTooLarge {
+        path: PathBuf,
+    },
+    RepeatedPath {
+        path: PathBuf,
+    },
+    CostOverflow {
+        path: PathBuf,
+    },
     Output,
+    /// `--output` could not be created or written. The parent directory is not created.
+    ReportFile {
+        path: PathBuf,
+    },
+    Compare(rum_meter::compare::CompareError),
 }
 
 impl fmt::Display for CliError {
@@ -205,7 +338,7 @@ impl fmt::Display for CliError {
             Self::DuplicateAddress { path, address } => {
                 write!(
                     f,
-                    "rum-meter: {}: duplicate address {}",
+                    "rum-meter: {}: duplicate address {}; each address may occur once, so remove the repeat or do not pass overlapping states",
                     rum_meter::rum::escape_controls(&path.display().to_string()),
                     rum_meter::rum::escape_controls(address)
                 )
@@ -213,25 +346,51 @@ impl fmt::Display for CliError {
             Self::LabelTooLarge { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: resource label is repeated across too many instances",
+                    "rum-meter: {}: resource label is repeated across too many instances; split the state into smaller files",
                     rum_meter::rum::escape_controls(&path.display().to_string())
                 )
             }
             Self::RepeatedPath { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: state file is given more than once",
+                    "rum-meter: {}: state file is given more than once; pass each state file once",
                     rum_meter::rum::escape_controls(&path.display().to_string())
                 )
             }
             Self::CostOverflow { path } => {
                 write!(
                     f,
-                    "rum-meter: {}: monthly cost overflows",
+                    "rum-meter: {}: monthly cost overflows; check the prices and --hours-per-month",
                     rum_meter::rum::escape_controls(&path.display().to_string())
                 )
             }
-            Self::Output => f.write_str("rum-meter: cannot write report to stdout"),
+            Self::Output => f.write_str("rum-meter: cannot write report to stdout; check that stdout is open and the disk is not full"),
+            Self::ReportFile { path } => {
+                write!(
+                    f,
+                    "rum-meter: cannot write report to {}; check that the parent directory exists and is writable, the tool does not create it",
+                    rum_meter::rum::escape_controls(&path.display().to_string())
+                )
+            }
+            Self::Compare(err) => write!(f, "{err}"),
+        }
+    }
+}
+
+impl CliError {
+    fn hint(&self) -> &'static str {
+        match self {
+            Self::State(err) => err.hint(),
+            Self::Prices(err) => err.hint(),
+            Self::DuplicateAddress { .. } => "remove the repeat or do not pass overlapping states",
+            Self::LabelTooLarge { .. } => "split the state into smaller files",
+            Self::RepeatedPath { .. } => "pass each state file once",
+            Self::CostOverflow { .. } => "check the prices and --hours-per-month",
+            Self::Output => "check that stdout is open and the disk is not full",
+            Self::ReportFile { .. } => {
+                "check that the parent directory exists and is writable, the tool does not create it"
+            }
+            Self::Compare(err) => err.hint(),
         }
     }
 }
@@ -316,17 +475,19 @@ fn reject_repeated_address(
     Ok(())
 }
 
-/// Result of a report that was printed. A threshold breach is exit 1, not an error line.
+/// Result of a report that was printed. A threshold breach is exit 1.
+/// The report is unchanged. A pipe writes nothing about the breach.
 enum RunOutcome {
-    Success,
-    ThresholdExceeded,
+    Success { context: String },
+    ThresholdExceeded { hint: &'static str },
 }
 
 /// A flag that would not change the report. Exit 3, before any file is opened.
 ///
 /// The first match wins: `--max-increase` on count, `--max-rum` on diff,
 /// `--hours-per-month` without `--prices`, then on diff without `--json`
-/// first `--top` and then `--explain`.
+/// first `--top` and then `--explain`, then `--compare` with a format flag,
+/// then `--explain` with `--compare`. The five checks above stay in that order.
 fn refused_option(cli: &Cli) -> Option<&'static str> {
     let is_diff = matches!(&cli.command, Commands::Diff { .. });
     if !is_diff && cli.max_increase.is_some() {
@@ -343,6 +504,12 @@ fn refused_option(cli: &Cli) -> Option<&'static str> {
     }
     if is_diff && cli.explain && !cli.json {
         return Some(EXPLAIN_DIFF_NEEDS_JSON);
+    }
+    if cli.compare.is_some() && (cli.json || cli.markdown || cli.html) {
+        return Some(COMPARE_NEEDS_TEXT);
+    }
+    if cli.compare.is_some() && cli.explain {
+        return Some(EXPLAIN_NEEDS_NO_COMPARE);
     }
     None
 }
@@ -396,17 +563,29 @@ fn execute(cli: &Cli) -> Result<RunOutcome, CliError> {
                 })?,
                 None => Vec::new(),
             };
-            let report = if cli.json {
+            let report = if let Some(path) = cli.compare.as_deref() {
+                rum_meter::compare::render_count_difference(path, &files, cli.top, &costs)
+                    .map_err(CliError::Compare)?
+            } else if cli.json {
                 rum_meter::render::render_count_json(&files, cli.explain, cli.top, &costs)
+            } else if cli.markdown {
+                rum_meter::doc::render_count_markdown(&files, cli.explain, cli.top, &costs)
+            } else if cli.html {
+                rum_meter::doc::render_count_html(&files, cli.explain, cli.top, &costs)
             } else {
                 rum_meter::render::render_count_text(&files, cli.explain, cli.top, &costs)
             };
-            write_report(&report)?;
+            write_report(cli.output.as_deref(), &report)?;
             Ok(outcome(
                 cli.max_rum
                     .is_some_and(|max_rum| count_exceeds(rum, max_rum)),
+                format!("states {}, rum {rum}", files.len()),
+                "the summed RUM is above --max-rum; the report is unchanged",
             ))
         }
+        Commands::Completions { .. } => Ok(RunOutcome::Success {
+            context: String::new(),
+        }),
         Commands::Diff { old, new } => {
             let prices = match &cli.prices {
                 Some(path) => Some((
@@ -439,7 +618,23 @@ fn execute(cli: &Cli) -> Result<RunOutcome, CliError> {
                 }
                 None => Vec::new(),
             };
-            let report = if cli.json {
+            let report = if let Some(path) = cli.compare.as_deref() {
+                let costs = match &prices {
+                    Some((path, prices)) => rum_meter::cost::monthly_costs(new_rum, prices, hours)
+                        .map_err(|_| CliError::CostOverflow {
+                            path: path.to_path_buf(),
+                        })?,
+                    None => Vec::new(),
+                };
+                rum_meter::compare::render_diff_difference(
+                    path,
+                    &diff,
+                    &new_verdicts,
+                    cli.top,
+                    &costs,
+                )
+                .map_err(CliError::Compare)?
+            } else if cli.json {
                 let costs = match &prices {
                     Some((path, prices)) => rum_meter::cost::monthly_costs(new_rum, prices, hours)
                         .map_err(|_| CliError::CostOverflow {
@@ -460,24 +655,137 @@ fn execute(cli: &Cli) -> Result<RunOutcome, CliError> {
                     cli.explain,
                     cli.top,
                 )
+            } else if cli.markdown {
+                rum_meter::doc::render_diff_markdown(old, new, &diff, &cost_deltas)
+            } else if cli.html {
+                rum_meter::doc::render_diff_html(old, new, &diff, &cost_deltas)
             } else {
                 rum_meter::render::render_diff_text(old, new, &diff, &cost_deltas)
             };
-            write_report(&report)?;
-            Ok(outcome(cli.max_increase.is_some_and(|max_increase| {
-                increase_exceeds(diff.rum_delta(), max_increase)
-            })))
+            write_report(cli.output.as_deref(), &report)?;
+            Ok(outcome(
+                cli.max_increase
+                    .is_some_and(|max_increase| increase_exceeds(diff.rum_delta(), max_increase)),
+                format!("rum {} -> {}", diff.old_rum, diff.new_rum),
+                "the RUM increase is above --max-increase; the report is unchanged",
+            ))
         }
     }
 }
 
-/// Flush explicitly so a buffered write failure cannot turn success into a panic.
-fn write_report(report: &str) -> Result<(), CliError> {
-    let mut stdout = io::stdout().lock();
-    stdout
+/// Write the report to `--output`, or to stdout when that flag is absent.
+///
+/// An existing file is replaced. A missing parent directory is not created.
+/// That failure is the same exit 2 as a failed write to stdout. A threshold
+/// is still exit 1, and the report is written either way.
+///
+/// The file is written under a temporary name in the same directory and
+/// renamed into place only after the write finishes. SIGINT removes that
+/// temporary name and exits 130, so the destination is never a prefix of the
+/// report. Codes 0, 1, 2 and 3 are unchanged.
+fn write_report(path: Option<&Path>, report: &str) -> Result<(), CliError> {
+    let Some(path) = path else {
+        let mut stdout = io::stdout().lock();
+        return stdout
+            .write_all(report.as_bytes())
+            .and_then(|()| stdout.flush())
+            .map_err(|_| CliError::Output);
+    };
+    write_report_file(path, report)
+}
+
+/// Same directory as `path`, so the rename that publishes the report is atomic.
+fn partial_report_path(path: &Path) -> Option<PathBuf> {
+    let name = path.file_name()?;
+    if name.is_empty() {
+        return None;
+    }
+    let mut partial_name = name.to_os_string();
+    partial_name.push(format!(".rum-meter-{}.partial", std::process::id()));
+    Some(path.with_file_name(partial_name))
+}
+
+/// `count --output missing/report.txt` must not create `missing`.
+fn parent_is_missing(path: &Path) -> bool {
+    match path.parent() {
+        Some(parent) if !parent.as_os_str().is_empty() => !parent.is_dir(),
+        _ => false,
+    }
+}
+
+fn abandon_partial(partial: &Path) {
+    let _ = std::fs::remove_file(partial);
+    interrupt::clear_partial();
+}
+
+fn write_report_file(path: &Path, report: &str) -> Result<(), CliError> {
+    let fail = || CliError::ReportFile {
+        path: path.to_path_buf(),
+    };
+    let Some(partial) = partial_report_path(path) else {
+        return Err(fail());
+    };
+    if parent_is_missing(path) {
+        return Err(fail());
+    }
+    if !interrupt::publish_partial(&partial) {
+        return Err(fail());
+    }
+    let opened = open_partial(&partial);
+    let mut file = match opened {
+        Ok(file) => file,
+        Err(_) => {
+            abandon_partial(&partial);
+            return Err(fail());
+        }
+    };
+    let written = file
         .write_all(report.as_bytes())
-        .and_then(|()| stdout.flush())
-        .map_err(|_| CliError::Output)
+        .and_then(|()| file.flush());
+    // Close before the rename, so the published file is the full report.
+    drop(file);
+    if written.is_err() {
+        abandon_partial(&partial);
+        return Err(fail());
+    }
+    if interrupt::replace_report(&partial, path).is_err() {
+        abandon_partial(&partial);
+        return Err(fail());
+    }
+    interrupt::clear_partial();
+    Ok(())
+}
+
+/// `O_NOFOLLOW` so a symlink planted at the temporary name is not truncated.
+#[cfg(unix)]
+fn open_partial(path: &Path) -> std::io::Result<std::fs::File> {
+    use std::os::unix::fs::OpenOptionsExt;
+
+    std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .custom_flags(o_nofollow())
+        .open(path)
+}
+
+#[cfg(any(target_os = "linux", target_os = "android"))]
+fn o_nofollow() -> i32 {
+    0o400000
+}
+
+#[cfg(all(unix, not(any(target_os = "linux", target_os = "android"))))]
+fn o_nofollow() -> i32 {
+    0x100
+}
+
+#[cfg(not(unix))]
+fn open_partial(path: &Path) -> std::io::Result<std::fs::File> {
+    std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .open(path)
 }
 
 /// `--max-rum` compared with the summed count. A total that does not fit in `u64` is over every limit.
@@ -496,10 +804,24 @@ fn increase_exceeds(delta: i64, max_increase: u64) -> bool {
     }
 }
 
-fn outcome(exceeded: bool) -> RunOutcome {
+fn outcome(exceeded: bool, context: String, hint: &'static str) -> RunOutcome {
     if exceeded {
-        RunOutcome::ThresholdExceeded
+        RunOutcome::ThresholdExceeded { hint }
     } else {
-        RunOutcome::Success
+        RunOutcome::Success { context }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::show_extra_on;
+
+    #[test]
+    fn extra_context_follows_the_terminal_unless_a_flag_is_set() {
+        assert!(!show_extra_on(false, false, false));
+        assert!(show_extra_on(false, false, true));
+        assert!(show_extra_on(false, true, false));
+        assert!(!show_extra_on(true, false, true));
+        assert!(!show_extra_on(true, true, true));
     }
 }
