@@ -7,7 +7,7 @@
 
 use std::fs;
 use std::io::Read;
-#[cfg(unix)]
+#[cfg(all(target_os = "linux", target_arch = "x86_64", not(coverage)))]
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
