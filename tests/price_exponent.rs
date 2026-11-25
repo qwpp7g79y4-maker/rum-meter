@@ -1,13 +1,20 @@
 //! A tiny price file with a huge exponent is decided at once.
 
 use std::process::Command;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
 const BIN: &str = env!("CARGO_BIN_EXE_rum-meter");
 const STATE: &str = "tests/fixtures/v4_one_managed.json";
 
-fn price_file(name: &str, body: &str) -> std::path::PathBuf {
-    let dir = std::env::temp_dir().join(format!("rum-meter-exp-{}-{name}", std::process::id()));
+// A counter, not the price text, names the directory: on a case-insensitive
+// file system `1E+9` and `1e-9` would share one and the parallel tests would
+// overwrite each other's price file.
+static NEXT_DIR: AtomicUsize = AtomicUsize::new(0);
+
+fn price_file(body: &str) -> std::path::PathBuf {
+    let n = NEXT_DIR.fetch_add(1, Ordering::Relaxed);
+    let dir = std::env::temp_dir().join(format!("rum-meter-exp-{}-{n}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let path = dir.join("prices.json");
     std::fs::write(&path, body).unwrap();
@@ -17,7 +24,7 @@ fn price_file(name: &str, body: &str) -> std::path::PathBuf {
 fn with_price(price: &str) -> (std::process::Output, Duration) {
     let body =
         format!(r#"{{"currency":"EUR","tiers":[{{"name":"a","price_per_rum_hour":{price}}}]}}"#);
-    let path = price_file(&price.replace(['+', '-', '.'], "_"), &body);
+    let path = price_file(&body);
     let start = Instant::now();
     let out = Command::new(BIN)
         .current_dir(env!("CARGO_MANIFEST_DIR"))

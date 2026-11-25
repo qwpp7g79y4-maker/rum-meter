@@ -1,5 +1,9 @@
 //! A stdout that is closed at start (`>&-`) is exit 2 with a message.
 
+// Every test here drives `sh` or `/dev/null`; on Windows the file is empty,
+// so its imports and constants are not left unused.
+#![cfg(unix)]
+
 use std::process::Command;
 
 const BIN: &str = env!("CARGO_BIN_EXE_rum-meter");
