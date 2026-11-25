@@ -17,6 +17,20 @@ Deze pagina laat zien hoe elke release van rum-meter is gecontroleerd voordat hi
 
 De secties over dekking en meettijd hieronder zijn gemeten op `decfa7b`, niet op `54dcdd2`.
 
+## Rust 1.85 (lokale run, pre-release 1.0.0)
+
+| | |
+|---|---|
+| Datum | 2026-11-25 |
+| Toolchain | rustc 1.85.1 (`cargo +1.85`) |
+| Gemeten commit | `4051b09`, met dezelfde code als `54dcdd2` (in dit verslag is geen code gewijzigd) |
+| `cargo +1.85 fmt --check` | Schoon (exit 0) |
+| `cargo +1.85 clippy --all-targets --locked -- -D warnings` | Schoon (exit 0) |
+| `cargo +1.85 test --locked` | 320 passed, 0 failed, 0 ignored (debugmodus, opgeteld over 45 "test result"-regels van deze crate) |
+| `cargo +1.85 test --release --locked` | 320 passed, 0 failed, 0 ignored (opgeteld over 45 "test result"-regels van deze crate) |
+
+De tests liepen in een aparte doelmap (`target/isolated-185`). De "not run"-regels hierboven blijven staan.
+
 ## Regeldekking (pre-release 1.0.0)
 
 | | |

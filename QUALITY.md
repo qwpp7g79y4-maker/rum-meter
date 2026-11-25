@@ -17,6 +17,20 @@ This page shows how each release of rum-meter was checked before it was publishe
 
 The coverage and timing sections below were measured at `decfa7b`, not at `54dcdd2`.
 
+## Rust 1.85 (local run, pre-release 1.0.0)
+
+| | |
+|---|---|
+| Date | 2026-11-25 |
+| Toolchain | rustc 1.85.1 (`cargo +1.85`) |
+| Commit measured | `4051b09`, which has the same code as `54dcdd2` (no code changed in this report) |
+| `cargo +1.85 fmt --check` | Clean (exit 0) |
+| `cargo +1.85 clippy --all-targets --locked -- -D warnings` | Clean (exit 0) |
+| `cargo +1.85 test --locked` | 320 passed, 0 failed, 0 ignored (debug mode, summed over 45 "test result" lines of this crate) |
+| `cargo +1.85 test --release --locked` | 320 passed, 0 failed, 0 ignored (summed over 45 "test result" lines of this crate) |
+
+The tests ran in a separate target directory (`target/isolated-185`). The "not run" lines above stay as they are.
+
 ## Line coverage (pre-release 1.0.0)
 
 | | |
