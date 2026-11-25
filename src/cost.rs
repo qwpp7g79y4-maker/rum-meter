@@ -109,10 +109,24 @@ pub(crate) fn monthly_cents(
     if is_negative(price_per_rum_hour) {
         return Err(CostOverflow);
     }
-    let scaled = BigDecimal::from(rum)
-        * price_per_rum_hour.clone()
-        * BigDecimal::from(hours_per_month)
-        * BigDecimal::from(100u32);
+    let factor =
+        BigDecimal::from(rum) * BigDecimal::from(hours_per_month) * BigDecimal::from(100u32);
+    if Zero::is_zero(&factor) || Zero::is_zero(price_per_rum_hour) {
+        return Ok(0);
+    }
+    // Decide from the size alone, so an exponent like 1e999999999 is neither
+    // expanded into a billion digits nor rounded down from that many.
+    let magnitude = i64::try_from(price_per_rum_hour.digits())
+        .unwrap_or(i64::MAX)
+        .saturating_sub(price_per_rum_hour.as_bigint_and_exponent().1);
+    let total = magnitude.saturating_add(i64::try_from(factor.digits()).unwrap_or(i64::MAX));
+    if total >= 22 {
+        return Err(CostOverflow);
+    }
+    if total <= -1 {
+        return Ok(0);
+    }
+    let scaled = factor * price_per_rum_hour.clone();
     scaled
         .with_scale_round(0, RoundingMode::HalfUp)
         .to_u64()
