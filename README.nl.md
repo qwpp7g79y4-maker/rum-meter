@@ -329,6 +329,14 @@ Dit zijn alle opties uit `rum-meter --help`. De commando's zijn `count` en `diff
 
 Elke invoerfout zegt wat er misging en eindigt met wat je eraan kunt doen. De details, met exitcodes, staan in de [referentie](docs/reference.nl.md).
 
+### Afsluitcodes
+
+- `0`: het commando is klaar. Dat geldt ook als het totaal of de stijging gelijk is aan de limiet, en voor `--help` en `--version`.
+- `1`: een drempel is overschreden: `--max-rum` bij `count`, of `--max-increase` bij `diff`. Het rapport wordt nog wel gedrukt.
+- `2`: een invoerfout, bijvoorbeeld een bestand dat niet te lezen is, een pad dat geen gewoon bestand is, ongeldige JSON, een state die geen formaat v4 is, een dubbel adres, een bestand boven 128 MiB, of een rapport dat niet geschreven kan worden. Bij invoerfouten is stdout leeg.
+- `3`: een gebruiksfout, zoals een onbekende optie, een ontbrekend argument, of een vlag die het rapport niet zou veranderen. Stdout is leeg.
+- `130`: onderbroken door SIGINT.
+
 ## Hoe het rekent
 
 Elk getal is terug te voeren op deze regels. Het adresformaat, het prijsbestand en het JSON-object staan in de [referentie](docs/reference.nl.md#hoe-het-rekent).
@@ -378,7 +386,7 @@ De billingpagina toont de telling achteraf. rum-meter leest een bestand dat je a
 
 Waar de fixtures vandaan komen: [tests/fixtures/README.md](tests/fixtures/README.md).
 
-De suite heeft 315 automatische tests (`cargo test`). [QUALITY.nl.md](QUALITY.nl.md) noemt hetzelfde aantal.
+De suite heeft 320 automatische tests (`cargo test`). [QUALITY.nl.md](QUALITY.nl.md) noemt hetzelfde aantal.
 
 ## Privacy
 
@@ -387,6 +395,10 @@ rum-meter werkt volledig offline: geen netwerk, geen API-sleutel, geen telemetri
 ## Steunen
 
 rum-meter is gratis te gebruiken. Bespaart het je geld, dan kun je het werk steunen via [Ko-fi](https://ko-fi.com/pepai).
+
+### Onderhoud
+
+rum-meter wordt door één persoon onderhouden. Er is geen toegezegde reactietijd. Bugs en verzoeken gaan via de [issue-formulieren](https://github.com/qwpp7g79y4-maker/rum-meter/issues/new/choose); plak nooit een echt statebestand. Beveiligingsproblemen meld je privé, zie [SECURITY.md](SECURITY.md). Wijzigingen staan in [CHANGELOG.md](CHANGELOG.md). Om te bouwen is Rust 1.85 of nieuwer nodig. rum-meter levert geen prijslijst mee: prijzen komen alleen uit het bestand dat je met `--prices` opgeeft, dus er is in de tool niets om bij te houden met de tarieven van HCP Terraform.
 
 ## Licentie
 

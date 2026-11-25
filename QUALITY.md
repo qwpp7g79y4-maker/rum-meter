@@ -7,16 +7,16 @@ This page shows how each release of rum-meter was checked before it was publishe
 | | |
 |---|---|
 | Version | 1.0.0 (not published from this branch) |
-| Commit measured | `79bc956` (branch prep/w24-fout) |
-| Tests | 315 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debug mode) |
-| Lints | `cargo fmt --check` and `cargo clippy --all-targets -- -D warnings` clean |
+| Commit measured | `b2b6f7a` (branch fix/stdout-gesloten-prijs-exponent) |
+| Tests | 320 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debug mode) |
+| Lints | Not run at `b2b6f7a`. `cargo fmt --check` and `cargo clippy --all-targets -- -D warnings` were clean at `79bc956`. |
 
 ## Test count (pre-release 1.0.0)
 
 | | |
 |---|---|
-| Commit measured | `662813e` (branch prep/w24-fout) |
-| Tests | 315 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debug mode) |
+| Commit measured | `b2b6f7a` (branch fix/stdout-gesloten-prijs-exponent) |
+| Tests | 320 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debug mode) |
 
 ## Line coverage (pre-release 1.0.0)
 

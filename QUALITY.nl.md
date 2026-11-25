@@ -7,16 +7,16 @@ Deze pagina laat zien hoe elke release van rum-meter is gecontroleerd voordat hi
 | | |
 |---|---|
 | Versie | 1.0.0 (niet gepubliceerd vanaf deze tak) |
-| Gemeten commit | `79bc956` (tak prep/w24-fout) |
-| Tests | 315 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debugmodus) |
-| Lints | `cargo fmt --check` en `cargo clippy --all-targets -- -D warnings` schoon |
+| Gemeten commit | `b2b6f7a` (tak fix/stdout-gesloten-prijs-exponent) |
+| Tests | 320 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debugmodus) |
+| Lints | Niet uitgevoerd op `b2b6f7a`. `cargo fmt --check` en `cargo clippy --all-targets -- -D warnings` waren schoon op `79bc956`. |
 
 ## Testaantal (pre-release 1.0.0)
 
 | | |
 |---|---|
-| Gemeten commit | `662813e` (tak prep/w24-fout) |
-| Tests | 315 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debugmodus) |
+| Gemeten commit | `b2b6f7a` (tak fix/stdout-gesloten-prijs-exponent) |
+| Tests | 320 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debugmodus) |
 
 ## Regeldekking (pre-release 1.0.0)
 

@@ -327,6 +327,14 @@ These are all the options of `rum-meter --help`. The commands are `count` and `d
 
 Every input error says what went wrong and ends with what you can do about it. The details, with exit codes, are in the [reference](docs/reference.md).
 
+### Exit codes
+
+- `0`: the command finished. This includes a total or an increase equal to the limit, and `--help` and `--version`.
+- `1`: a threshold was exceeded: `--max-rum` on `count`, or `--max-increase` on `diff`. The report is still printed.
+- `2`: an input error, for example a file that cannot be read, a path that is not a regular file, invalid JSON, a state that is not format v4, a duplicate address, a file over 128 MiB, or a report that cannot be written. Stdout is empty for input errors.
+- `3`: a usage error, such as an unknown option, a missing argument, or a flag that would not change the report. Stdout is empty.
+- `130`: interrupted by SIGINT.
+
 ## How it counts
 
 Every number can be traced back to these rules. The address format, the price file and the JSON object are in the [reference](docs/reference.md#how-it-counts).
@@ -376,7 +384,7 @@ The billing page shows the count afterwards. rum-meter reads a file you already 
 
 Where the fixtures come from: [tests/fixtures/README.md](tests/fixtures/README.md).
 
-The suite has 315 automated tests (`cargo test`). [QUALITY.md](QUALITY.md) records the same number.
+The suite has 320 automated tests (`cargo test`). [QUALITY.md](QUALITY.md) records the same number.
 
 ## Privacy
 
@@ -385,6 +393,10 @@ rum-meter is fully offline: no network, no API key, no telemetry. The binary rea
 ## Support
 
 rum-meter is free to use. If it saves you money, you can support the work via [Ko-fi](https://ko-fi.com/pepai).
+
+### Maintenance
+
+rum-meter is maintained by one person. There is no promised response time. Bugs and feature requests go through the [issue forms](https://github.com/qwpp7g79y4-maker/rum-meter/issues/new/choose); never paste a real state file. Security problems are reported privately, see [SECURITY.md](SECURITY.md). Changes are listed in [CHANGELOG.md](CHANGELOG.md). The tool needs Rust 1.85 or newer to build. rum-meter ships no price list: prices come only from the file you pass with `--prices`, so there is nothing in the tool to keep up to date with HCP Terraform rates.
 
 ## License
 
