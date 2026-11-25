@@ -206,7 +206,7 @@ fn write_completions(shell: &str) -> ExitCode {
     let mut buffer = Vec::new();
     clap_complete::generate(shell, &mut Cli::command(), "rum-meter", &mut buffer);
     let mut out = io::stdout().lock();
-    if out.write_all(&buffer).and_then(|()| out.flush()).is_err() {
+    if stdout_is_closed() || out.write_all(&buffer).and_then(|()| out.flush()).is_err() {
         write_stderr_line("rum-meter: cannot write message to stdout");
         return ExitCode::from(2);
     }
@@ -270,7 +270,7 @@ fn clap_exit(err: clap::Error) -> ExitCode {
     } else {
         io::stdout().flush()
     };
-    if printed.is_ok() && flushed.is_ok() {
+    if printed.is_ok() && flushed.is_ok() && (usage || !stdout_is_closed()) {
         return if usage {
             ExitCode::from(3)
         } else {
@@ -284,6 +284,59 @@ fn clap_exit(err: clap::Error) -> ExitCode {
         write_stderr_line("rum-meter: cannot write message to stdout");
         ExitCode::from(2)
     }
+}
+
+/// Set before `main` when descriptor 1 was not open at process start.
+///
+/// The standard library reopens a closed stdout as `/dev/null` before `main`
+/// runs, so a report would be lost with exit 0. Only a check made before that
+/// can tell `>&-` from a real `/dev/null`.
+#[cfg(unix)]
+static STDOUT_WAS_CLOSED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+#[cfg(unix)]
+unsafe extern "C" {
+    fn fcntl(fd: i32, cmd: i32, ...) -> i32;
+}
+
+#[cfg(all(
+    unix,
+    any(target_os = "linux", target_os = "android", target_os = "freebsd")
+))]
+#[used]
+#[unsafe(link_section = ".init_array")]
+static NOTE_STDOUT: extern "C" fn() = note_stdout;
+
+#[cfg(all(unix, any(target_os = "macos", target_os = "ios")))]
+#[used]
+#[unsafe(link_section = "__DATA,__mod_init_func")]
+static NOTE_STDOUT: extern "C" fn() = note_stdout;
+
+#[cfg(all(
+    unix,
+    any(
+        target_os = "linux",
+        target_os = "android",
+        target_os = "freebsd",
+        target_os = "macos",
+        target_os = "ios"
+    )
+))]
+extern "C" fn note_stdout() {
+    const F_GETFD: i32 = 1;
+    // SAFETY: F_GETFD only reads the descriptor flags.
+    let closed = unsafe { fcntl(1, F_GETFD) } == -1;
+    STDOUT_WAS_CLOSED.store(closed, std::sync::atomic::Ordering::Relaxed);
+}
+
+#[cfg(unix)]
+fn stdout_is_closed() -> bool {
+    STDOUT_WAS_CLOSED.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+#[cfg(not(unix))]
+fn stdout_is_closed() -> bool {
+    false
 }
 
 /// One line on stderr. A full or closed stderr is ignored so the caller can
@@ -685,6 +738,9 @@ fn execute(cli: &Cli) -> Result<RunOutcome, CliError> {
 /// report. Codes 0, 1, 2 and 3 are unchanged.
 fn write_report(path: Option<&Path>, report: &str) -> Result<(), CliError> {
     let Some(path) = path else {
+        if stdout_is_closed() {
+            return Err(CliError::Output);
+        }
         let mut stdout = io::stdout().lock();
         return stdout
             .write_all(report.as_bytes())
