@@ -2,21 +2,20 @@
 
 Deze pagina laat zien hoe elke release van rum-meter is gecontroleerd voordat hij online kwam, wat we vonden en wat we hebben opgelost. Het beschrijft onze controles. Het is geen garantie dat de software foutloos of veilig is.
 
-## Pre-release 1.0.0 (tak prep/w24-fout)
+## Pre-release 1.0.0 (tak fix/stdout-gesloten-prijs-exponent)
 
 | | |
 |---|---|
 | Versie | 1.0.0 (niet gepubliceerd vanaf deze tak) |
-| Gemeten commit | `b2b6f7a` (tak fix/stdout-gesloten-prijs-exponent) |
-| Tests | 320 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debugmodus) |
-| Lints | Niet uitgevoerd op `b2b6f7a`. `cargo fmt --check` en `cargo clippy --all-targets -- -D warnings` waren schoon op `79bc956`. |
+| Datum | 2026-11-25 |
+| Gemeten commit | `54dcdd2` (tak fix/stdout-gesloten-prijs-exponent) |
+| `cargo fmt --check` | Schoon (exit 0) |
+| `cargo clippy --all-targets --locked -- -D warnings` | Schoon (exit 0) |
+| `cargo test --locked` | 320 passed, 0 failed, 0 ignored (debugmodus) |
+| `cargo test --release --locked` | 320 passed, 0 failed, 0 ignored |
+| Dekking, fuzz-targets, `cargo audit`, `cargo deny` | not run op `54dcdd2` |
 
-## Testaantal (pre-release 1.0.0)
-
-| | |
-|---|---|
-| Gemeten commit | `b2b6f7a` (tak fix/stdout-gesloten-prijs-exponent) |
-| Tests | 320 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debugmodus) |
+De secties over dekking en meettijd hieronder zijn gemeten op `decfa7b`, niet op `54dcdd2`.
 
 ## Regeldekking (pre-release 1.0.0)
 

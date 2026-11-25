@@ -2,21 +2,20 @@
 
 This page shows how each release of rum-meter was checked before it was published, what we found, and what we fixed. It describes checks we did. It is not a guarantee that the software is free of bugs or secure.
 
-## Pre-release 1.0.0 (branch prep/w24-fout)
+## Pre-release 1.0.0 (branch fix/stdout-gesloten-prijs-exponent)
 
 | | |
 |---|---|
 | Version | 1.0.0 (not published from this branch) |
-| Commit measured | `b2b6f7a` (branch fix/stdout-gesloten-prijs-exponent) |
-| Tests | 320 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debug mode) |
-| Lints | Not run at `b2b6f7a`. `cargo fmt --check` and `cargo clippy --all-targets -- -D warnings` were clean at `79bc956`. |
+| Date | 2026-11-25 |
+| Commit measured | `54dcdd2` (branch fix/stdout-gesloten-prijs-exponent) |
+| `cargo fmt --check` | Clean (exit 0) |
+| `cargo clippy --all-targets --locked -- -D warnings` | Clean (exit 0) |
+| `cargo test --locked` | 320 passed, 0 failed, 0 ignored (debug mode) |
+| `cargo test --release --locked` | 320 passed, 0 failed, 0 ignored |
+| Coverage, fuzz targets, `cargo audit`, `cargo deny` | not run at `54dcdd2` |
 
-## Test count (pre-release 1.0.0)
-
-| | |
-|---|---|
-| Commit measured | `b2b6f7a` (branch fix/stdout-gesloten-prijs-exponent) |
-| Tests | 320 passed, 0 failed, 0 ignored (`cargo test --no-fail-fast`, debug mode) |
+The coverage and timing sections below were measured at `decfa7b`, not at `54dcdd2`.
 
 ## Line coverage (pre-release 1.0.0)
 
