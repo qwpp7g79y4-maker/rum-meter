@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const HEADING: &str = "## Aan de slag in 5 minuten";
+const HEADING_EN: &str = "## Quickstart in 5 minutes";
 const FORBIDDEN: [&str; 5] = ["/var/log", "journalctl", "http://", "https://", "--tui"];
 
 fn commands(readme: &str) -> Vec<String> {
@@ -18,7 +19,7 @@ fn commands(readme: &str) -> Vec<String> {
             if in_section {
                 break;
             }
-            in_section = line.trim_end() == HEADING;
+            in_section = line.trim_end() == HEADING || line.trim_end() == HEADING_EN;
             continue;
         }
         if !in_section {

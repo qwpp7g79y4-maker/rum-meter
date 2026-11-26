@@ -1,5 +1,7 @@
 # Kwaliteitsrapport
 
+pep: 10
+
 Deze pagina laat zien hoe elke release van rum-meter is gecontroleerd voordat hij online kwam, wat we vonden en wat we hebben opgelost. Het beschrijft onze controles. Het is geen garantie dat de software foutloos of veilig is.
 
 ## Pre-release 1.0.0 (tak fix/stdout-gesloten-prijs-exponent)

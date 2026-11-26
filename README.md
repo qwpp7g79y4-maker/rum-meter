@@ -240,7 +240,7 @@ All options, exit codes and error messages are listed in the [reference](docs/re
 The manual page is [`man/rum-meter.1`](man/rum-meter.1).
 `rum-meter --help` lists the commands `count`, `diff` and `help`.
 
-## Aan de slag in 5 minuten
+## Quickstart in 5 minutes
 
 Install rum-meter as in Installation and put it on your `PATH`. Run the
 commands below from the repository root. They read the fictional state files in
@@ -389,6 +389,10 @@ The suite has 320 automated tests (`cargo test`). [QUALITY.md](QUALITY.md) recor
 ## Privacy
 
 rum-meter is fully offline: no network, no API key, no telemetry. The binary reads only the paths you pass, or stdin when a state path is `-`. Output contains addresses, module paths, types, rule codes and counts. Attribute values, sensitive values, private data and outputs are left out. `tests/safety.rs` guards that with synthetic fixtures. No error message contains bytes from the file, only the path, the line and column of a parse error, and the kind of error.
+
+## Maintenance
+
+After a release the tool is dormant: a new version appears only for a reported bug, a request, or a security problem. Security always comes first.
 
 ## Support
 
