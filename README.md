@@ -240,7 +240,7 @@ All options, exit codes and error messages are listed in the [reference](docs/re
 The manual page is [`man/rum-meter.1`](man/rum-meter.1).
 `rum-meter --help` lists the commands `count`, `diff` and `help`.
 
-## Aan de slag in 5 minuten
+## Quickstart in 5 minutes
 
 Install rum-meter as in Installation and put it on your `PATH`. Run the
 commands below from the repository root. They read the fictional state files in
