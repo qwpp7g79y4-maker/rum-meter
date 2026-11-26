@@ -4,7 +4,7 @@
 
 Tel factureerbare HCP Terraform-resources in een lokaal statebestand, vóór de factuur.
 
-[![crates.io](https://img.shields.io/crates/v/rum-meter.svg)](https://crates.io/crates/rum-meter) [![downloads](https://img.shields.io/crates/d/rum-meter.svg)](https://crates.io/crates/rum-meter) [![CI](https://github.com/qwpp7g79y4-maker/rum-meter/actions/workflows/ci.yml/badge.svg)](https://github.com/qwpp7g79y4-maker/rum-meter/actions/workflows/ci.yml) [![PEPAI gecontroleerd](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fqwpp7g79y4-maker%2Frum-meter%2Fmain%2F.github%2Fbadge.json)](QUALITY.nl.md) [![MSRV 1.85](https://img.shields.io/badge/MSRV-1.85-blue.svg)](https://github.com/qwpp7g79y4-maker/rum-meter/blob/main/Cargo.toml) [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#licentie)
+[![crates.io](https://img.shields.io/crates/v/rum-meter.svg)](https://crates.io/crates/rum-meter) [![downloads](https://img.shields.io/crates/d/rum-meter.svg)](https://crates.io/crates/rum-meter) [![CI](https://github.com/qwpp7g79y4-maker/rum-meter/actions/workflows/ci.yml/badge.svg)](https://github.com/qwpp7g79y4-maker/rum-meter/actions/workflows/ci.yml) [![PEPAI checked](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fqwpp7g79y4-maker%2Frum-meter%2Fmain%2F.github%2Fbadge.json)](QUALITY.md) [![MSRV 1.85](https://img.shields.io/badge/MSRV-1.85-blue.svg)](https://github.com/qwpp7g79y4-maker/rum-meter/blob/main/Cargo.toml) [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](https://github.com/qwpp7g79y4-maker/rum-meter#license)
 
 rum-meter is een opdrachtregelprogramma in Rust. Het leest `terraform.tfstate`-bestanden van formaatversie 4 en telt factureerbare HCP Terraform Resources Under Management (RUM) volgens de definitie van HashiCorp. Het legt elke instantie uit, splitst het totaal uit per module en per type, schat maandkosten uit een prijsbestand dat je zelf meegeeft, en vergelijkt twee states. Het heeft geen account nodig en maakt geen netwerkverbinding. Het resultaat is een schatting.
 
@@ -391,6 +391,10 @@ De suite heeft 320 automatische tests (`cargo test`). [QUALITY.nl.md](QUALITY.nl
 ## Privacy
 
 rum-meter werkt volledig offline: geen netwerk, geen API-sleutel, geen telemetrie. De binary leest alleen de paden die je opgeeft, of stdin als een statepad `-` is. In de uitvoer staan adressen, modulepaden, types, regelcodes en aantallen. Attribuutwaarden, sensitive values, private data en outputs blijven achterwege. `tests/safety.rs` bewaakt dat met synthetische fixtures. Geen foutmelding bevat bytes uit het bestand, alleen het pad, de regel en de kolom van een parsefout, en het soort fout.
+
+## Onderhoud
+
+Na een release staat de tool in sluimermodus (dormant): een nieuwe versie komt er alleen bij een gemelde bug, een verzoek of een beveiligingsprobleem. Beveiliging gaat altijd voor.
 
 ## Steunen
 

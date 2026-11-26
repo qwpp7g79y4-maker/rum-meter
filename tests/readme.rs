@@ -287,7 +287,7 @@ fn english_and_dutch_pages_match() {
         );
     }
     let nl = read(README_NL);
-    assert_eq!(headings(&nl).len(), 14, "README.nl.md section count");
+    assert_eq!(headings(&nl).len(), 15, "README.nl.md section count");
     assert_eq!(headings(&read(REF)).len(), 7, "reference section count");
     assert!(nl.contains("7 oktober 2026"), "Dutch README date");
     assert!(

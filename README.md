@@ -390,6 +390,10 @@ The suite has 320 automated tests (`cargo test`). [QUALITY.md](QUALITY.md) recor
 
 rum-meter is fully offline: no network, no API key, no telemetry. The binary reads only the paths you pass, or stdin when a state path is `-`. Output contains addresses, module paths, types, rule codes and counts. Attribute values, sensitive values, private data and outputs are left out. `tests/safety.rs` guards that with synthetic fixtures. No error message contains bytes from the file, only the path, the line and column of a parse error, and the kind of error.
 
+## Maintenance
+
+After a release the tool is dormant: a new version appears only for a reported bug, a request, or a security problem. Security always comes first.
+
 ## Support
 
 rum-meter is free to use. If it saves you money, you can support the work via [Ko-fi](https://ko-fi.com/pepai).
